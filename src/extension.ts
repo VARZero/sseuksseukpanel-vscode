@@ -16,18 +16,18 @@ export function activate(context: vscode.ExtensionContext) {
 	context.subscriptions.push(
 		vscode.commands.registerCommand('SseukSseuk.undo', () => {
 			vscode.window.showInformationMessage('undo');
+            vscode.commands.executeCommand("undo");
 		})
 	);
 
 	context.subscriptions.push(
 		vscode.commands.registerCommand('SseukSseuk.addTopLine', () => {
-			vscode.window.showInformationMessage('Add new Line - TOP');
+            
 		})
 	);
 	
 	context.subscriptions.push(
 		vscode.commands.registerCommand('SseukSseuk.addBotLine', () => {
-			vscode.window.showInformationMessage('Add new Line - BOTTOM');
 		})
 	);
 
@@ -79,8 +79,8 @@ class SseukSseukPanel implements vscode.WebviewViewProvider{
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <style>
 :root{
-    --backgroundC: #1f2428;
-    --elementC: white;
+    --backgroundC: var(--vscode-panel-background);
+    --elementC: var(--vscode-editor-foreground);
 }
 body{
     user-select: none;
@@ -138,6 +138,7 @@ body{
     flex: 1;
 }
 
+#ref{display: none;}
     </style>
     <title>SseukSsuek Panel</title>
 </head>
@@ -146,10 +147,10 @@ body{
         <div id="EditBox">
             <div id="strings">
                 <div id="textArea">
-                    <div class="textChar" id="0"></div>
+                    <div class="textChar" id="ref"></div>
                 </div>
                 <div id="insertArea">
-                    <div class="insertChar" id="0"></div>
+                    <div class="insertChar" id="ref"></div>
                 </div>
             </div>
             <div id="appendArea">
@@ -163,6 +164,7 @@ body{
         <div id="EditBox">
             <div id="strings">
                 <div id="textArea">
+                    <div class="textChar" id="ref"></div>
                     <div class="textChar" id="0">t</div>
                     <div class="textChar" id="1">e</div>
                     <div class="textChar" id="2"> </div>
@@ -170,6 +172,7 @@ body{
                     <div class="textChar" id="4">t</div>
                 </div>
                 <div id="insertArea">
+                    <div class="insertChar" id="ref"></div>
                     <div class="insertChar" id="0">t</div>
                     <div class="insertChar" id="1">e</div>
                     <div class="insertChar" id="2"> </div>
@@ -184,6 +187,56 @@ body{
             </div>
         </div>
     </section>
+    <script>
+txt = "te xt"
+RefEb = document.querySelector("#sys > #EditBox");
+
+function setSsuekSsuek(text){
+    newEb = RefEb.cloneNode(true);
+    newEbTa = newEb.children[0].children[0]; newEbTc = newEbTa.children[0];
+    newEbIa = newEb.children[0].children[1]; newEbIc = newEbTa.children[0];
+    newEbAa = newEb.children[1];
+    newEbAb = newEbAa.children[0]; newEbAs = newEbAa.children[1]; newEbAt = newEbAa.children[2];
+    document.querySelector("#output").appendChild(newEb);
+    charnum = 0
+    for (char of text){
+        eEbTc = newEbTc.cloneNode(true); 
+        eEbTc.id = charnum; eEbTc.innerText = char;
+        eEbTc.addEventListener("pointerdown", selectPD);
+        newEbTa.appendChild(eEbTc);
+        eEbIc = newEbIc.cloneNode(true);
+        eEbIc.id = charnum; eEbIc.innerText = char;
+        eEbIc.addEventListener("pointerdown", insertPD);
+        newEbIa.appendChild(eEbIc);
+        charnum += 1;
+    }
+    newEbAb.addEventListener("pointerdown", appbPD);
+    newEbAs.addEventListener("pointerdown", appsPD);
+    newEbAt.addEventListener("pointerdown", apptPD);
+}
+
+function selectPD(e){
+    //
+}
+
+function insertPD(e){
+    //
+}
+
+function appbPD(e){
+    //
+}
+
+function appsPD(e){
+    //
+}
+
+function apptPD(e){
+    //
+}
+
+
+    </script>
 </body>
 </html>
 		`;
