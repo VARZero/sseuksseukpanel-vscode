@@ -5,8 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <style>
 :root{
-    --backgroundC: white;
-    --elementC: black;
+    --backgroundC: /*var(--vscode-panel-background)*/ white;
+    --elementC: /*var(--vscode-editor-foreground)*/ black;
 }
 body{
     user-select: none;
@@ -64,6 +64,22 @@ body{
     flex: 1;
 }
 
+#SelToolBox{
+    display: none;
+}
+
+#SelToolBox.active{
+    display: block;
+}
+
+#InsToolBox{
+    display: none;
+}
+
+#InsToolBox.active{
+    display: block;
+}
+
 #ref{display: none;}
     </style>
     <title>SseukSsuek Panel</title>
@@ -84,6 +100,17 @@ body{
                 <div id="appendSpace" class="appendEle">   </div>
                 <div id="appendTab" class="appendEle"></div>
             </div>
+        </div>
+        <div id="SelToolBox">
+            <div class="tools" id="cancel">취소</div>
+            <div class="tools" id="cut">자르기</div>
+            <div class="tools" id="copy">복사</div>
+            <div class="tools" id="delete">지우기</div>
+        </div>
+        <div id="InsToolBox">
+            <div class="tools" id="stop">중단</div>
+            <div class="tools" id="space">공백</div>
+            <div class="tools" id="tab">탭</div>
         </div>
     </section>
     <section id="output">
@@ -112,12 +139,40 @@ body{
                 <div id="appendTab" class="appendEle"></div>
             </div>
         </div>
+        <div id="SelToolBox">
+            <div class="tools" id="cancel">취소</div>
+            <div class="tools" id="cut">자르기</div>
+            <div class="tools" id="copy">복사</div>
+            <div class="tools" id="delete">지우기</div>
+        </div>
+        <div id="InsToolBox">
+            <div class="tools" id="stop">중단</div>
+            <div class="tools" id="AddSpace">
+                <div class="tools" id="space">공백</div>
+                <div class="tools" id="tab">탭</div>
+            </div>
+        </div>
     </section>
     <script>
-txt = "te xt"
-RefEb = document.querySelector("#sys > #EditBox");
+let txt = "te xt"
+let nowStatus;
+const RefEb = document.querySelector("#sys > #EditBox");
+
+class status{
+    constructor(){
+        this.select = false;
+        this.seletStart = -1;
+        this.selectEnd = -1;
+        
+        this.insert = false;
+        this.insertStart = -1;
+
+        this.append = false;
+    }
+}
 
 function setSsuekSsuek(text){
+    
     newEb = RefEb.cloneNode(true);
     newEbTa = newEb.children[0].children[0]; newEbTc = newEbTa.children[0];
     newEbIa = newEb.children[0].children[1]; newEbIc = newEbTa.children[0];
@@ -160,7 +215,6 @@ function appsPD(e){
 function apptPD(e){
     //
 }
-
 
     </script>
 </body>
