@@ -15,25 +15,25 @@ export function activate(context: vscode.ExtensionContext) {
 
 	context.subscriptions.push(
 		vscode.commands.registerCommand('SseukSseuk.undo', () => {
-			vscode.window.showInformationMessage('undo');
             vscode.commands.executeCommand("undo");
 		})
 	);
 
 	context.subscriptions.push(
 		vscode.commands.registerCommand('SseukSseuk.addTopLine', () => {
-            
+            vscode.commands.executeCommand("editor.action.insertLineBefore");
 		})
 	);
 	
 	context.subscriptions.push(
 		vscode.commands.registerCommand('SseukSseuk.addBotLine', () => {
+            vscode.commands.executeCommand("editor.action.insertLineAfter");
 		})
 	);
 
 	context.subscriptions.push(
 		vscode.commands.registerCommand('SseukSseuk.removeLine', () => {
-			vscode.window.showInformationMessage('Remove Line');
+			vscode.commands.executeCommand("editor.action.deleteLines");
 		})
 	);
 }
