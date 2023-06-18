@@ -11,7 +11,7 @@
 body{
     user-select: none;
 }
-#sys{
+section#sys{
     display: none;
 }
 #EditBox{
@@ -27,11 +27,16 @@ body{
 #textArea{
     color: var(--elementC);
     display: flex;
+    border-right: 1px dotted var(--elementC);
 }
 .textChar{
     white-space: pre;
 }
-.textChar:hover{
+#textArea.active .textChar:hover{
+    background-color: var(--elementC);
+    color: var(--backgroundC);
+}
+.textChar.select{
     background-color: var(--elementC);
     color: var(--backgroundC);
 }
@@ -41,10 +46,14 @@ body{
     display: flex;
 }
 .insertChar{
+    position: relative;
     white-space: pre;
     color: var(--backgroundC);
 }
-.insertChar:hover{
+.insertChar.active{
+    border-left: 1px dashed var(--elementC);
+}
+#EditBox.NonActive .insertChar:hover{
     border-left: 1px dashed var(--elementC);
 }
 
@@ -52,16 +61,34 @@ body{
     flex: 1;
     display: flex;
     flex-direction: row;
-    height: 4em;
+    height: 3.5em;
 }
 .appendEle{
+    position: relative;
     white-space: pre;
 }
-.appendEle:hover{
+.appendEle.active{
+    border-left: 1px dashed var(--elementC);
+}
+#EditBox.NonActive .appendEle:hover{
     border-left: 1px dashed var(--elementC);
 }
 #appendTab{
     flex: 1;
+}
+
+#toolArea{
+    width: 100%; height: 24px;
+    display: flex;
+}
+
+#loading{
+    margin-right: 4px;
+    opacity: 0;
+}
+
+#loading.active{
+    opacity: 1;
 }
 
 #SelToolBox{
@@ -69,7 +96,7 @@ body{
 }
 
 #SelToolBox.active{
-    display: block;
+    display: flex;
 }
 
 #InsToolBox{
@@ -77,7 +104,26 @@ body{
 }
 
 #InsToolBox.active{
-    display: block;
+    display: flex;
+}
+
+.tools{
+    color: var(--elementC);
+    background-color: var(--backgroundC);
+    margin-right: 4px;
+    padding-left: 4px;
+    padding-right: 4px;
+    border: 1px solid ;
+}
+
+canvas{
+    touch-action: none;
+    left: 0;
+    position: absolute;
+    width: 80vw; height: 100%;
+    z-index: 999;
+    border-left: 1px dashed var(--elementC);
+    border-top: 1px solid var(--elementC);
 }
 
 #ref{display: none;}
@@ -86,82 +132,56 @@ body{
 </head>
 <body>
     <section id="sys">
-        <div id="EditBox">
-            <div id="strings">
-                <div id="textArea">
-                    <div class="textChar" id="ref"></div>
-                </div>
-                <div id="insertArea">
-                    <div class="insertChar" id="ref"></div>
-                </div>
+        <div id="toolArea">
+            <div id="loading">
+                <svg width="24" height="24" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><style>.spinner_P7sC{fill:var(--elementC);transform-origin:center;animation:spinner_svv2 .75s infinite linear}@keyframes spinner_svv2{100%{transform:rotate(360deg)}}</style><path d="M10.14,1.16a11,11,0,0,0-9,8.92A1.59,1.59,0,0,0,2.46,12,1.52,1.52,0,0,0,4.11,10.7a8,8,0,0,1,6.66-6.61A1.42,1.42,0,0,0,12,2.69h0A1.57,1.57,0,0,0,10.14,1.16Z" class="spinner_P7sC"/></svg>
             </div>
-            <div id="appendArea">
-                <div id="appendBehind" class="appendEle"> </div>
-                <div id="appendSpace" class="appendEle">   </div>
-                <div id="appendTab" class="appendEle"></div>
+            <div id="SelToolBox">
+                <div class="tools" id="cancel" onpointerdown="reload()">취소</div>
+                <div class="tools" id="cut">자르기</div>
+                <div class="tools" id="copy">복사</div>
+                <div class="tools" id="delete">지우기</div>
             </div>
-        </div>
-        <div id="SelToolBox">
-            <div class="tools" id="cancel">취소</div>
-            <div class="tools" id="cut">자르기</div>
-            <div class="tools" id="copy">복사</div>
-            <div class="tools" id="delete">지우기</div>
-        </div>
-        <div id="InsToolBox">
-            <div class="tools" id="stop">중단</div>
-            <div class="tools" id="space">공백</div>
-            <div class="tools" id="tab">탭</div>
-        </div>
-    </section>
-    <section id="output">
-        <div id="EditBox">
-            <div id="strings">
-                <div id="textArea">
-                    <div class="textChar" id="ref"></div>
-                    <div class="textChar" id="0">t</div>
-                    <div class="textChar" id="1">e</div>
-                    <div class="textChar" id="2"> </div>
-                    <div class="textChar" id="3">x</div>
-                    <div class="textChar" id="4">t</div>
-                </div>
-                <div id="insertArea">
-                    <div class="insertChar" id="ref"></div>
-                    <div class="insertChar" id="0">t</div>
-                    <div class="insertChar" id="1">e</div>
-                    <div class="insertChar" id="2"> </div>
-                    <div class="insertChar" id="3">x</div>
-                    <div class="insertChar" id="4">t</div>
-                </div>
-            </div>
-            <div id="appendArea">
-                <div id="appendBehind" class="appendEle"> </div>
-                <div id="appendSpace" class="appendEle">   </div>
-                <div id="appendTab" class="appendEle"></div>
-            </div>
-        </div>
-        <div id="SelToolBox">
-            <div class="tools" id="cancel">취소</div>
-            <div class="tools" id="cut">자르기</div>
-            <div class="tools" id="copy">복사</div>
-            <div class="tools" id="delete">지우기</div>
-        </div>
-        <div id="InsToolBox">
-            <div class="tools" id="stop">중단</div>
-            <div class="tools" id="AddSpace">
+            <div id="InsToolBox">
+                <div class="tools" id="stop" onpointerdown="reload()">중단</div>
                 <div class="tools" id="space">공백</div>
                 <div class="tools" id="tab">탭</div>
             </div>
         </div>
+        <div id="EditBox" class="NonActive">
+            <div id="strings">
+                <div id="textArea" class="active">
+                    <div class="textChar" id="ref"></div>
+                </div>
+                <div id="insertArea">
+                    <div class="insertChar" id="ref"></div>
+                </div>
+            </div>
+            <div id="appendArea">
+                <div id="appendBehind" class="appendEle"> </div>
+                <div id="appendSpace" class="appendEle">   </div>
+                <div id="appendTab" class="appendEle"></div>
+            </div>
+        </div>
+    </section>
+    <section id="output">
     </section>
     <script>
-let txt = "te xt"
-let nowStatus;
+let txt = "te xts"
+let nowStatus = undefined;
+const RefTa = document.querySelector("#sys > #toolArea");
 const RefEb = document.querySelector("#sys > #EditBox");
 
 class status{
-    constructor(){
-        this.select = false;
-        this.seletStart = -1;
+    constructor(EB){
+        this.targetEB = EB;
+
+        this.active = false;
+        this.lineNum = -1;
+        this.col = -1;
+
+        this.select = 0; // 0: 선택 안함, 1: 하나만 선택, 2. 선택 완료
+        this.selectStart = -1;
         this.selectEnd = -1;
         
         this.insert = false;
@@ -169,24 +189,83 @@ class status{
 
         this.append = false;
     }
+
+    activeEB(type, target){
+        let textA = this.targetEB.children[0].children[0];
+        for (let insEle of this.targetEB.children[0].children[1].children){
+            insEle.removeEventListener("pointerdown", insertPD);
+        }
+        let appendA = this.targetEB.children[1];
+        appendA.children[0].removeEventListener("pointerdown", appbPD); // Behind
+        appendA.children[1].removeEventListener("pointerdown", appsPD); // Space
+        appendA.children[2].removeEventListener("pointerdown", apptPD); // Tab
+        
+        this.targetEB.classList.remove("NonActive");
+
+        if (type == "select"){
+            document.querySelector("#output #SelToolBox").classList.add("active");
+        
+            switch(this.select){
+                case 0:
+                    this.select = 1;
+                    this.selectStart = Number(target.id.replace(/[^0-9]/g, ""));
+                    target.classList.add("select");
+                break;
+                case 1:
+                    this.select = 2;
+                    this.selectEnd = Number(target.id.replace(/[^0-9]/g, ""));
+                    for (let selEle of this.targetEB.children[0].children[0].children){
+                        selEle.removeEventListener("pointerdown", insertPD);
+                    }
+                    for (let col = this.selectStart + 1; col <= this.selectEnd; col+=1){
+                        document.querySelector("#output .textChar#t"+String(col)).classList.add("select");
+                    }
+                    textA.classList.remove("active");
+                break;
+            }
+            return;
+        }
+
+        textA.classList.remove("active");
+        switch(type){
+            case "insert":
+                this.insert = true;
+                this.insertStart = Number(target.id.replace(/[^0-9]/g, ""));
+            break;
+            case "append":
+                this.append = true;
+            break;
+        }
+        document.querySelector("#output #InsToolBox").classList.add("active");
+        
+        let newCanv = document.createElement("canvas");
+        target.appendChild(newCanv);
+    }
 }
 
 function setSsuekSsuek(text){
+    if (nowStatus != undefined){delete nowStatus;}
+    document.getElementById("output").innerHTML = "";
     
+    // Tool박스 이벤트 지정.
+    newTa = RefTa.cloneNode(true);
+    document.querySelector("#output").appendChild(newTa);
+
     newEb = RefEb.cloneNode(true);
     newEbTa = newEb.children[0].children[0]; newEbTc = newEbTa.children[0];
-    newEbIa = newEb.children[0].children[1]; newEbIc = newEbTa.children[0];
+    newEbIa = newEb.children[0].children[1]; newEbIc = newEbIa.children[0];
     newEbAa = newEb.children[1];
-    newEbAb = newEbAa.children[0]; newEbAs = newEbAa.children[1]; newEbAt = newEbAa.children[2];
+    newEbAb = newEbAa.children[0]; newEbAs = newEbAa.children[1];newEbAt = newEbAa.children[2];
     document.querySelector("#output").appendChild(newEb);
+
     charnum = 0
     for (char of text){
         eEbTc = newEbTc.cloneNode(true); 
-        eEbTc.id = charnum; eEbTc.innerText = char;
+        eEbTc.id = "t" + charnum; eEbTc.innerText = char;
         eEbTc.addEventListener("pointerdown", selectPD);
         newEbTa.appendChild(eEbTc);
         eEbIc = newEbIc.cloneNode(true);
-        eEbIc.id = charnum; eEbIc.innerText = char;
+        eEbIc.id = "i" + charnum; eEbIc.innerText = char;
         eEbIc.addEventListener("pointerdown", insertPD);
         newEbIa.appendChild(eEbIc);
         charnum += 1;
@@ -194,27 +273,36 @@ function setSsuekSsuek(text){
     newEbAb.addEventListener("pointerdown", appbPD);
     newEbAs.addEventListener("pointerdown", appsPD);
     newEbAt.addEventListener("pointerdown", apptPD);
+    nowStatus = new status(newEb);
 }
 
 function selectPD(e){
-    //
+    nowStatus.activeEB("select", e.currentTarget);
 }
 
 function insertPD(e){
-    //
+    nowStatus.activeEB("insert", e.currentTarget);
 }
 
 function appbPD(e){
-    //
+    nowStatus.activeEB("append", e.currentTarget);
 }
 
 function appsPD(e){
-    //
+    nowStatus.activeEB("append", e.currentTarget);
 }
 
 function apptPD(e){
-    //
+    nowStatus.activeEB("append", e.currentTarget);
 }
+
+function reload(e){
+    setSsuekSsuek(txt);
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+    setSsuekSsuek(txt);
+});
 
     </script>
 </body>
