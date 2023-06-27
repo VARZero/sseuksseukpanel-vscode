@@ -62,6 +62,17 @@ class SseukSseukPanel implements vscode.WebviewViewProvider{
 		};
 		
 		webviewView.webview.html = this._getSSPHtmlWebview(webviewView.webview);
+
+        webviewView.webview.onDidReceiveMessage(data => {
+			switch (data.type) {
+				case 'textadd':
+					{
+						vscode.window.activeTextEditor?.insertSnippet(new vscode.SnippetString(`#${data.value}`), new vscode.Range());
+                        // 라인 위치 정보 가져오기
+						break;
+					}
+			}
+		});
 	}
 
 	public lineCursor(line: vscode.TextEditorSelectionChangeEvent){

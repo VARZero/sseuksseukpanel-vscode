@@ -78,6 +78,7 @@ section#sys{
 }
 
 #toolArea{
+    font-weight: bolder;
     width: 100%; height: 24px;
     display: flex;
 }
@@ -108,11 +109,11 @@ section#sys{
 }
 
 .tools{
-    color: var(--elementC);
-    background-color: var(--backgroundC);
+    color: var(--backgroundC);
+    background-color: var(--elementC);
     margin-right: 4px;
-    padding-left: 4px;
-    padding-right: 4px;
+    padding-left: 1em;
+    padding-right: 1em;
     border: 1px solid ;
 }
 
@@ -176,7 +177,11 @@ class status{
     constructor(EB){
         this.targetEB = EB;
 
-        this.active = false;
+        this.drawActive = false;
+        this.ctx = undefined;
+        this.lastPointX = -1;
+        this.lastPointY = -1;
+
         this.lineNum = -1;
         this.col = -1;
 
@@ -188,6 +193,9 @@ class status{
         this.insertStart = -1;
 
         this.append = false;
+
+        this.nowCanv = undefined;
+        this.setLastTime = undefined;
     }
 
     activeEB(type, target){
@@ -240,6 +248,10 @@ class status{
         
         let newCanv = document.createElement("canvas");
         target.appendChild(newCanv);
+        newCanv.addEventListener("pointerdown", canvPD);
+
+        newCanv.width = newCanv.offsetWidth;
+        newCanv.height = newCanv.offsetHeight;
     }
 }
 
@@ -298,6 +310,63 @@ function apptPD(e){
 
 function reload(e){
     setSsuekSsuek(txt);
+}
+
+function canvPD(e){
+    nowStatus.drawActive = true;
+    e.currentTarget.addEventListener("pointerup", canvCancel);
+    e.currentTarget.addEventListener("pointerout", canvCancel);
+    
+    e.currentTarget.addEventListener("pointermove", canvPM);
+
+    nowStatus.nowCanv = e.currentTarget;
+    nowStatus.ctx = e.currentTarget.getContext("2d");
+
+    if (this.setLastTime != undefined){
+        clearTimeout(this.setLastTime);
+    }
+    this.setLastTime = undefined;
+
+    e.currentTarget.removeEventListener("pointerdown", canvPD);
+}
+
+function canvCancel(e){
+    nowStatus.drawActive = false;
+    e.currentTarget.addEventListener("pointerdown", canvPD);
+
+    nowStatus.ctx = undefined;
+    nowStatus.lastPointX = -1;
+    nowStatus.lastPointY = -1;
+
+    e.currentTarget.removeEventListener("pointermove", canvPM);
+
+    e.currentTarget.removeEventListener("pointerup", canvCancel);
+    e.currentTarget.removeEventListener("pointerout", canvCancel);
+}
+
+function canvPM(e){
+    if (nowStatus.drawActive == false) {return;}
+    nowStatus.ctx.lineWidth = 2; nowStatus.ctx.lineCap = "round"; 
+    nowStatus.ctx.strokeStyle = "rgba(0,0,0,"+String(e.pressure.toFixed(1))+")";
+    nowStatus.ctx.beginPath();
+    nowStatus.ctx.moveTo(nowStatus.lastPointX, nowStatus.lastPointY);
+    if (nowStatus.lastPointX == -1){
+        nowStatus.ctx.moveTo(e.offsetX, e.offsetY);
+    }
+    nowStatus.ctx.lineTo(e.offsetX, e.offsetY);
+    nowStatus.ctx.stroke();
+
+    nowStatus.lastPointX = e.offsetX; nowStatus.lastPointY = e.offsetY; 
+    if (this.setLastTime != undefined){
+        clearTimeout(this.setLastTime);
+    }
+    
+    this.setLastTime = setTimeout(processOCR, 2000);
+}
+
+function processOCR(){
+    txtimg = nowStatus.nowCanv.toDataURL();
+    console.log(txtimg);
 }
 
 document.addEventListener("DOMContentLoaded", () => {
