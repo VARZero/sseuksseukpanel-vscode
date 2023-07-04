@@ -10,7 +10,9 @@ export function activate(context: vscode.ExtensionContext) {
 
 	vscode.window.onDidChangeTextEditorSelection((e) => {
 		console.log(e);
-		//provider.lineCursor(e);
+        var linet = vscode.window.activeTextEditor?.document.lineAt(vscode.window.activeTextEditor.selection.active.line);
+		console.log(linet?.text);
+        //provider.lineCursor(e);
 	});
 
 	context.subscriptions.push(
