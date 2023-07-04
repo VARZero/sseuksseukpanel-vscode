@@ -67,8 +67,8 @@ class SseukSseukPanel implements vscode.WebviewViewProvider{
 			switch (data.type) {
 				case 'textadd':
 					{
-						vscode.window.activeTextEditor?.insertSnippet(new vscode.SnippetString(`#${data.value}`), new vscode.Range());
-                        // 라인 위치 정보 가져오기
+						vscode.window.activeTextEditor?.insertSnippet(new vscode.SnippetString(`#${data.value}`), // (TODO) 이부분은 나중에 VSCode 내부 API로도 받을수 있게 하기! 
+                                new vscode.Range(new vscode.Position(data.line - 1, data.col - 1), new vscode.Position(data.line - 1, data.col - 1)));
 						break;
 					}
 			}
