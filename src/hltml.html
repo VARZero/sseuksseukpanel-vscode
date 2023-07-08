@@ -5,8 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <style>
 :root{
-    --backgroundC: /*var(--vscode-panel-background)*/ white;
-    --elementC: /*var(--vscode-editor-foreground)*/ black;
+    --backgroundC: var(--vscode-panel-background);
+    --elementC: var(--vscode-editor-foreground);
 }
 body{
     user-select: none;
@@ -139,14 +139,14 @@ canvas{
             </div>
             <div id="SelToolBox">
                 <div class="tools" id="cancel" onpointerdown="reload()">취소</div>
-                <div class="tools" id="cut">자르기</div>
-                <div class="tools" id="copy">복사</div>
-                <div class="tools" id="delete">지우기</div>
+                <div class="tools" id="cut" onpointerdown="tool_cut()">자르기</div>
+                <div class="tools" id="copy" onpointerdown="tool_copy()">복사</div>
+                <div class="tools" id="delete" onpointerdown="tool_delete()">지우기</div>
             </div>
             <div id="InsToolBox">
                 <div class="tools" id="stop" onpointerdown="reload()">중단</div>
-                <div class="tools" id="space">공백</div>
-                <div class="tools" id="tab">탭</div>
+                <div class="tools" id="space" onpointerdown="tool_space()">공백</div>
+                <div class="tools" id="tab" onpointerdown="tool_tab()">탭</div>
             </div>
         </div>
         <div id="EditBox" class="NonActive">
@@ -168,22 +168,27 @@ canvas{
     <section id="output">
     </section>
     <script>
-let txt = "te xts"
+let txt = "te xts"; let lastline = -1; let lastcol = -1;
 let nowStatus = undefined;
 const RefTa = document.querySelector("#sys > #toolArea");
 const RefEb = document.querySelector("#sys > #EditBox");
+const backgC = getComputedStyle(document.body).getPropertyValue('--backgroundC');
+const elemC = getComputedStyle(document.body).getPropertyValue('--elementC');
+
+const vscode = acquireVsCodeApi();
 
 class status{
-    constructor(EB){
+    constructor(EB, lN, cN){
         this.targetEB = EB;
 
+        this.drwaEnable = true;
         this.drawActive = false;
         this.ctx = undefined;
         this.lastPointX = -1;
         this.lastPointY = -1;
 
-        this.lineNum = -1;
-        this.col = -1;
+        this.lineNum = lN;
+        this.col = cN;
 
         this.select = 0; // 0: 선택 안함, 1: 하나만 선택, 2. 선택 완료
         this.selectStart = -1;
@@ -193,12 +198,13 @@ class status{
         this.insertStart = -1;
 
         this.append = false;
+        this.appendSize = "none";
 
         this.nowCanv = undefined;
         this.setLastTime = undefined;
     }
 
-    activeEB(type, target){
+    activeEB(type, target, appSize){
         let textA = this.targetEB.children[0].children[0];
         for (let insEle of this.targetEB.children[0].children[1].children){
             insEle.removeEventListener("pointerdown", insertPD);
@@ -222,16 +228,27 @@ class status{
                 case 1:
                     this.select = 2;
                     this.selectEnd = Number(target.id.replace(/[^0-9]/g, ""));
-                    for (let selEle of this.targetEB.children[0].children[0].children){
-                        selEle.removeEventListener("pointerdown", insertPD);
+                    if (this.selectStart > this.selectEnd){
+                        var temp = this.selectStart;
+                        this.selectStart = this.selectEnd;
+                        this.selectEnd = temp;
                     }
-                    for (let col = this.selectStart + 1; col <= this.selectEnd; col+=1){
+                    console.log(this.selectStart); console.log(this.selectEnd);
+                    for (let selEle of this.targetEB.children[0].children[0].children){
+                        selEle.removeEventListener("pointerdown", selectPD);
+                    }
+                    for (let col = this.selectStart; col <= this.selectEnd; col+=1){
                         document.querySelector("#output .textChar#t"+String(col)).classList.add("select");
                     }
                     textA.classList.remove("active");
                 break;
             }
             return;
+        }
+        else{
+            for (let selEle of this.targetEB.children[0].children[0].children){
+                selEle.removeEventListener("pointerdown", selectPD);
+            }
         }
 
         textA.classList.remove("active");
@@ -242,6 +259,7 @@ class status{
             break;
             case "append":
                 this.append = true;
+                this.appendSize = appSize;
             break;
         }
         document.querySelector("#output #InsToolBox").classList.add("active");
@@ -255,7 +273,7 @@ class status{
     }
 }
 
-function setSsuekSsuek(text){
+function setSsuekSsuek(text, line, col){
     if (nowStatus != undefined){delete nowStatus;}
     document.getElementById("output").innerHTML = "";
     
@@ -285,34 +303,72 @@ function setSsuekSsuek(text){
     newEbAb.addEventListener("pointerdown", appbPD);
     newEbAs.addEventListener("pointerdown", appsPD);
     newEbAt.addEventListener("pointerdown", apptPD);
-    nowStatus = new status(newEb);
+    nowStatus = new status(newEb, line, col);
+    txt = text; lastline = line; lastcol = col;
 }
 
 function selectPD(e){
-    nowStatus.activeEB("select", e.currentTarget);
+    nowStatus.activeEB("select", e.currentTarget, "");
 }
 
 function insertPD(e){
-    nowStatus.activeEB("insert", e.currentTarget);
+    nowStatus.activeEB("insert", e.currentTarget, "");
 }
 
 function appbPD(e){
-    nowStatus.activeEB("append", e.currentTarget);
+    nowStatus.activeEB("append", e.currentTarget, "behind");
 }
 
 function appsPD(e){
-    nowStatus.activeEB("append", e.currentTarget);
+    nowStatus.activeEB("append", e.currentTarget, "space");
 }
 
 function apptPD(e){
-    nowStatus.activeEB("append", e.currentTarget);
+    nowStatus.activeEB("append", e.currentTarget, "tab");
 }
 
 function reload(e){
-    setSsuekSsuek(txt);
+    setSsuekSsuek(txt, lastline, lastcol);
+}
+
+function tool_cut(){
+    currentEdit("cut");
+}
+
+function tool_copy(){
+    currentEdit("copy");
+}
+
+function tool_delete(){
+    currentEdit("delete")
+}
+
+function currentEdit(type){
+    vscode.postMessage({
+        type: "currentEdit",
+        editType: type,
+        line: nowStatus.lineNum,
+        start: nowStatus.selectStart,
+        end: nowStatus.selectEnd,
+    });
+}
+
+function tool_space(){
+    nowStatus.append = true;
+    nowStatus.appendSize = "space";
+    changeText("");
+}
+
+function tool_tab(){
+    nowStatus.append = true;
+    nowStatus.appendSize = "tab";
+    changeText("");
 }
 
 function canvPD(e){
+    if (nowStatus.drawEnable == false){
+        nowStatus.drawActive = false; return;
+    }
     nowStatus.drawActive = true;
     e.currentTarget.addEventListener("pointerup", canvCancel);
     e.currentTarget.addEventListener("pointerout", canvCancel);
@@ -365,14 +421,43 @@ function canvPM(e){
 }
 
 function processOCR(){
+    nowStatus.drwaEnable = false;
     txtimg = nowStatus.nowCanv.toDataURL();
     console.log(txtimg);
+
+    TODO // 텍스트 처리 함수로 넘기기.
+
+    changeText("test");
 }
 
-document.addEventListener("DOMContentLoaded", () => {
-    setSsuekSsuek(txt);
+function changeText(addtext){
+    outcol = txt.length;
+    if (nowStatus.insert == true){
+        outcol = nowStatus.insertStart;
+    }
+    
+    vscode.postMessage({
+        type: "textadd",
+        value: addtext,
+        line: nowStatus.lineNum,
+        col: outcol,
+        append: nowStatus.appendSize
+    });
+}
+
+window.addEventListener('message', event => {
+    const message = event.data;
+
+    switch (message.type){
+        case 'lineCurser':
+            setSsuekSsuek(message.lineT, message.lineN, message.colN);
+        break;
+    }
 });
 
+document.addEventListener("DOMContentLoaded", () => {
+    //setSsuekSsuek(txt, -1, -1);
+});
     </script>
 </body>
 </html>

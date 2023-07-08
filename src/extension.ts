@@ -9,10 +9,10 @@ export function activate(context: vscode.ExtensionContext) {
 		vscode.window.registerWebviewViewProvider(SseukSseukPanel.viewType, provider));
 
 	vscode.window.onDidChangeTextEditorSelection((e) => {
-		console.log(e);
-        var linet = vscode.window.activeTextEditor?.document.lineAt(vscode.window.activeTextEditor.selection.active.line);
-		console.log(linet?.text);
-        //provider.lineCursor(e);
+        var lineN = e.selections[0].active.line;
+        var colN = e.selections[0].active.character;
+        var lineT = vscode.window.activeTextEditor?.document.lineAt(vscode.window.activeTextEditor.selection.active.line).text;
+        provider.lineCursor(lineT, lineN, colN);
 	});
 
 	context.subscriptions.push(
@@ -68,18 +68,43 @@ class SseukSseukPanel implements vscode.WebviewViewProvider{
         webviewView.webview.onDidReceiveMessage(data => {
 			switch (data.type) {
 				case 'textadd':
-					{
-						vscode.window.activeTextEditor?.insertSnippet(new vscode.SnippetString(`#${data.value}`), // (TODO) 이부분은 나중에 VSCode 내부 API로도 받을수 있게 하기! 
-                                new vscode.Range(new vscode.Position(data.line - 1, data.col - 1), new vscode.Position(data.line - 1, data.col - 1)));
-						break;
-					}
+                    var txtout = "";
+                    switch(data.append){
+                        case 'none': break;
+                        case 'behind': break;
+                        case 'space': txtout += " "; break;
+                        case 'tab': txtout += "    "; break;
+                    }
+                    txtout += data.value;
+					vscode.window.activeTextEditor?.insertSnippet(new vscode.SnippetString(txtout), // (TODO) 이부분은 나중에 VSCode 내부 API로도 받을수 있게 하기! 
+                            new vscode.Range(new vscode.Position(data.line, data.col), new vscode.Position(data.line, data.col)));
+                    vscode.commands.executeCommand("editor.action.triggerSuggest");
+				break;
+				case "currentEdit":
+                    var lineText = vscode.window.activeTextEditor?.document.lineAt(data.line).text;
+                    var endT = data.end;
+                    if (endT === -1){ endT = data.start; }
+                    lineText = lineText?.substring(data.start, endT+1);
+                    switch(data.editType){
+                        case 'cut':
+                            vscode.env.clipboard.writeText(lineText!);
+                        case 'delete':
+                            vscode.window.activeTextEditor?.edit(tee => {
+                                tee.delete(new vscode.Range(new vscode.Position(data.line, data.start), new vscode.Position(data.line, endT+1)));
+                            });
+                        break;
+                        case 'copy':
+                            vscode.env.clipboard.writeText(lineText!);
+                        break;
+                    }
+                break;
 			}
 		});
 	}
 
-	public lineCursor(line: vscode.TextEditorSelectionChangeEvent){
+	public lineCursor(lineText: string | undefined, lineNumber: number, colNumber: number){
 		if(this._view) {
-			this._view.webview.postMessage({ type: 'lineCurser', linePosition: line.selections });
+			this._view.webview.postMessage({ type: 'lineCurser', lineT: lineText, lineN: lineNumber, colN: colNumber });
 		}
 	}
 
@@ -97,7 +122,7 @@ class SseukSseukPanel implements vscode.WebviewViewProvider{
 body{
     user-select: none;
 }
-#sys{
+section#sys{
     display: none;
 }
 #EditBox{
@@ -113,11 +138,16 @@ body{
 #textArea{
     color: var(--elementC);
     display: flex;
+    border-right: 1px dotted var(--elementC);
 }
 .textChar{
     white-space: pre;
 }
-.textChar:hover{
+#textArea.active .textChar:hover{
+    background-color: var(--elementC);
+    color: var(--backgroundC);
+}
+.textChar.select{
     background-color: var(--elementC);
     color: var(--backgroundC);
 }
@@ -127,10 +157,14 @@ body{
     display: flex;
 }
 .insertChar{
+    position: relative;
     white-space: pre;
     color: var(--backgroundC);
 }
-.insertChar:hover{
+.insertChar.active{
+    border-left: 1px dashed var(--elementC);
+}
+#EditBox.NonActive .insertChar:hover{
     border-left: 1px dashed var(--elementC);
 }
 
@@ -138,16 +172,35 @@ body{
     flex: 1;
     display: flex;
     flex-direction: row;
-    height: 4em;
+    height: 3.5em;
 }
 .appendEle{
+    position: relative;
     white-space: pre;
 }
-.appendEle:hover{
+.appendEle.active{
+    border-left: 1px dashed var(--elementC);
+}
+#EditBox.NonActive .appendEle:hover{
     border-left: 1px dashed var(--elementC);
 }
 #appendTab{
     flex: 1;
+}
+
+#toolArea{
+    font-weight: bolder;
+    width: 100%; height: 24px;
+    display: flex;
+}
+
+#loading{
+    margin-right: 4px;
+    opacity: 0;
+}
+
+#loading.active{
+    opacity: 1;
 }
 
 #SelToolBox{
@@ -155,7 +208,7 @@ body{
 }
 
 #SelToolBox.active{
-    display: block;
+    display: flex;
 }
 
 #InsToolBox{
@@ -163,7 +216,26 @@ body{
 }
 
 #InsToolBox.active{
-    display: block;
+    display: flex;
+}
+
+.tools{
+    color: var(--backgroundC);
+    background-color: var(--elementC);
+    margin-right: 4px;
+    padding-left: 1em;
+    padding-right: 1em;
+    border: 1px solid ;
+}
+
+canvas{
+    touch-action: none;
+    left: 0;
+    position: absolute;
+    width: 80vw; height: 100%;
+    z-index: 999;
+    border-left: 1px dashed var(--elementC);
+    border-top: 1px solid var(--elementC);
 }
 
 #ref{display: none;}
@@ -172,57 +244,29 @@ body{
 </head>
 <body>
     <section id="sys">
-        <div id="EditBox">
-            <div id="strings">
-                <div id="textArea">
-                    <div class="textChar" id="ref"></div>
-                </div>
-                <div id="insertArea">
-                    <div class="insertChar" id="ref"></div>
-                </div>
-            </div>
-            <div id="appendArea">
-                <div id="appendBehind" class="appendEle"> </div>
-                <div id="appendSpace" class="appendEle">   </div>
-                <div id="appendTab" class="appendEle"></div>
-            </div>
-        </div>
-        <div id="SelToolBox">
-            <div class="tools" id="cancel">취소</div>
-            <div class="tools" id="cut">자르기</div>
-            <div class="tools" id="copy">복사</div>
-            <div class="tools" id="delete">지우기</div>
-        </div>
-        <div id="InsToolBox">
-            <div class="tools" id="stop">중단</div>
-            <div class="tools" id="space">공백</div>
-            <div class="tools" id="tab">탭</div>
-        </div>
-    </section>
-    <section id="output">
-        <div id="process">
+        <div id="toolArea">
             <div id="loading">
                 <svg width="24" height="24" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><style>.spinner_P7sC{fill:var(--elementC);transform-origin:center;animation:spinner_svv2 .75s infinite linear}@keyframes spinner_svv2{100%{transform:rotate(360deg)}}</style><path d="M10.14,1.16a11,11,0,0,0-9,8.92A1.59,1.59,0,0,0,2.46,12,1.52,1.52,0,0,0,4.11,10.7a8,8,0,0,1,6.66-6.61A1.42,1.42,0,0,0,12,2.69h0A1.57,1.57,0,0,0,10.14,1.16Z" class="spinner_P7sC"/></svg>
             </div>
+            <div id="SelToolBox">
+                <div class="tools" id="cancel" onpointerdown="reload()">취소</div>
+                <div class="tools" id="cut" onpointerdown="tool_cut()">자르기</div>
+                <div class="tools" id="copy" onpointerdown="tool_copy()">복사</div>
+                <div class="tools" id="delete" onpointerdown="tool_delete()">지우기</div>
+            </div>
+            <div id="InsToolBox">
+                <div class="tools" id="stop" onpointerdown="reload()">중단</div>
+                <div class="tools" id="space" onpointerdown="tool_space()">공백</div>
+                <div class="tools" id="tab" onpointerdown="tool_tab()">탭</div>
+            </div>
         </div>
-        
-        <div id="EditBox">
+        <div id="EditBox" class="NonActive">
             <div id="strings">
-                <div id="textArea">
+                <div id="textArea" class="active">
                     <div class="textChar" id="ref"></div>
-                    <div class="textChar" id="0">t</div>
-                    <div class="textChar" id="1">e</div>
-                    <div class="textChar" id="2"> </div>
-                    <div class="textChar" id="3">x</div>
-                    <div class="textChar" id="4">t</div>
                 </div>
                 <div id="insertArea">
                     <div class="insertChar" id="ref"></div>
-                    <div class="insertChar" id="0">t</div>
-                    <div class="insertChar" id="1">e</div>
-                    <div class="insertChar" id="2"> </div>
-                    <div class="insertChar" id="3">x</div>
-                    <div class="insertChar" id="4">t</div>
                 </div>
             </div>
             <div id="appendArea">
@@ -231,59 +275,138 @@ body{
                 <div id="appendTab" class="appendEle"></div>
             </div>
         </div>
-        <div id="SelToolBox">
-            <div class="tools" id="cancel">취소</div>
-            <div class="tools" id="cut">자르기</div>
-            <div class="tools" id="copy">복사</div>
-            <div class="tools" id="delete">지우기</div>
-        </div>
-        <div id="InsToolBox">
-            <div class="tools" id="stop">중단</div>
-            <div class="tools" id="AddSpace">
-                <div class="tools" id="space">공백</div>
-                <div class="tools" id="tab">탭</div>
-            </div>
-        </div>
+    </section>
+    <section id="output">
     </section>
     <script>
-let txt = "te xt"
+let txt = "te xts"; let lastline = -1; let lastcol = -1;
 let nowStatus = undefined;
+const RefTa = document.querySelector("#sys > #toolArea");
 const RefEb = document.querySelector("#sys > #EditBox");
+const backgC = getComputedStyle(document.body).getPropertyValue('--backgroundC');
+const elemC = getComputedStyle(document.body).getPropertyValue('--elementC');
+
+const vscode = acquireVsCodeApi();
 
 class status{
-    constructor(){
-        this.active = false;
-        this.lineNum = -1;
-        this.col = -1;
+    constructor(EB, lN, cN){
+        this.targetEB = EB;
 
-        this.select = false;
-        this.seletStart = -1;
+        this.drwaEnable = true;
+        this.drawActive = false;
+        this.ctx = undefined;
+        this.lastPointX = -1;
+        this.lastPointY = -1;
+
+        this.lineNum = lN;
+        this.col = cN;
+
+        this.select = 0; // 0: 선택 안함, 1: 하나만 선택, 2. 선택 완료
+        this.selectStart = -1;
         this.selectEnd = -1;
         
         this.insert = false;
         this.insertStart = -1;
 
         this.append = false;
+        this.appendSize = "none";
+
+        this.nowCanv = undefined;
+        this.setLastTime = undefined;
+    }
+
+    activeEB(type, target, appSize){
+        let textA = this.targetEB.children[0].children[0];
+        for (let insEle of this.targetEB.children[0].children[1].children){
+            insEle.removeEventListener("pointerdown", insertPD);
+        }
+        let appendA = this.targetEB.children[1];
+        appendA.children[0].removeEventListener("pointerdown", appbPD); // Behind
+        appendA.children[1].removeEventListener("pointerdown", appsPD); // Space
+        appendA.children[2].removeEventListener("pointerdown", apptPD); // Tab
+        
+        this.targetEB.classList.remove("NonActive");
+
+        if (type == "select"){
+            document.querySelector("#output #SelToolBox").classList.add("active");
+        
+            switch(this.select){
+                case 0:
+                    this.select = 1;
+                    this.selectStart = Number(target.id.replace(/[^0-9]/g, ""));
+                    target.classList.add("select");
+                break;
+                case 1:
+                    this.select = 2;
+                    this.selectEnd = Number(target.id.replace(/[^0-9]/g, ""));
+                    if (this.selectStart > this.selectEnd){
+                        var temp = this.selectStart;
+                        this.selectStart = this.selectEnd;
+                        this.selectEnd = temp;
+                    }
+                    console.log(this.selectStart); console.log(this.selectEnd);
+                    for (let selEle of this.targetEB.children[0].children[0].children){
+                        selEle.removeEventListener("pointerdown", selectPD);
+                    }
+                    for (let col = this.selectStart; col <= this.selectEnd; col+=1){
+                        document.querySelector("#output .textChar#t"+String(col)).classList.add("select");
+                    }
+                    textA.classList.remove("active");
+                break;
+            }
+            return;
+        }
+        else{
+            for (let selEle of this.targetEB.children[0].children[0].children){
+                selEle.removeEventListener("pointerdown", selectPD);
+            }
+        }
+
+        textA.classList.remove("active");
+        switch(type){
+            case "insert":
+                this.insert = true;
+                this.insertStart = Number(target.id.replace(/[^0-9]/g, ""));
+            break;
+            case "append":
+                this.append = true;
+                this.appendSize = appSize;
+            break;
+        }
+        document.querySelector("#output #InsToolBox").classList.add("active");
+        
+        let newCanv = document.createElement("canvas");
+        target.appendChild(newCanv);
+        newCanv.addEventListener("pointerdown", canvPD);
+
+        newCanv.width = newCanv.offsetWidth;
+        newCanv.height = newCanv.offsetHeight;
     }
 }
 
-function setSsuekSsuek(text){
+function setSsuekSsuek(text, line, col){
     if (nowStatus != undefined){delete nowStatus;}
-    nowStatus = new status;
+    document.getElementById("output").innerHTML = "";
+    
+    // Tool박스 이벤트 지정.
+    newTa = RefTa.cloneNode(true);
+    document.querySelector("#output").appendChild(newTa);
+
     newEb = RefEb.cloneNode(true);
     newEbTa = newEb.children[0].children[0]; newEbTc = newEbTa.children[0];
-    newEbIa = newEb.children[0].children[1]; newEbIc = newEbTa.children[0];
+    newEbIa = newEb.children[0].children[1]; newEbIc = newEbIa.children[0];
     newEbAa = newEb.children[1];
-    newEbAb = newEbAa.children[0]; newEbAs = newEbAa.children[1]; newEbAt = newEbAa.children[2];
+    newEbAb = newEbAa.children[0]; newEbAs = newEbAa.children[1];newEbAt = newEbAa.children[2];
     document.querySelector("#output").appendChild(newEb);
+
     charnum = 0
     for (char of text){
         eEbTc = newEbTc.cloneNode(true); 
-        eEbTc.id = charnum; eEbTc.innerText = char;
+        eEbTc.id = "t" + charnum; eEbTc.innerText = char;
         eEbTc.addEventListener("pointerdown", selectPD);
         newEbTa.appendChild(eEbTc);
         eEbIc = newEbIc.cloneNode(true);
-        eEbIc.id = charnum; eEbIc.innerText = char;
+        eEbIc.id = "i" + charnum; eEbIc.innerText = char;
         eEbIc.addEventListener("pointerdown", insertPD);
         newEbIa.appendChild(eEbIc);
         charnum += 1;
@@ -291,31 +414,160 @@ function setSsuekSsuek(text){
     newEbAb.addEventListener("pointerdown", appbPD);
     newEbAs.addEventListener("pointerdown", appsPD);
     newEbAt.addEventListener("pointerdown", apptPD);
+    nowStatus = new status(newEb, line, col);
+    txt = text; lastline = line; lastcol = col;
 }
 
 function selectPD(e){
-    //
+    nowStatus.activeEB("select", e.currentTarget, "");
 }
 
 function insertPD(e){
-    //
+    nowStatus.activeEB("insert", e.currentTarget, "");
 }
 
 function appbPD(e){
-    //
+    nowStatus.activeEB("append", e.currentTarget, "behind");
 }
 
 function appsPD(e){
-    //
+    nowStatus.activeEB("append", e.currentTarget, "space");
 }
 
 function apptPD(e){
-    //
+    nowStatus.activeEB("append", e.currentTarget, "tab");
 }
 
+function reload(e){
+    setSsuekSsuek(txt, lastline, lastcol);
+}
+
+function tool_cut(){
+    currentEdit("cut");
+}
+
+function tool_copy(){
+    currentEdit("copy");
+}
+
+function tool_delete(){
+    currentEdit("delete")
+}
+
+function currentEdit(type){
+    vscode.postMessage({
+        type: "currentEdit",
+        editType: type,
+        line: nowStatus.lineNum,
+        start: nowStatus.selectStart,
+        end: nowStatus.selectEnd,
+    });
+}
+
+function tool_space(){
+    nowStatus.append = true;
+    nowStatus.appendSize = "space";
+    changeText("");
+}
+
+function tool_tab(){
+    nowStatus.append = true;
+    nowStatus.appendSize = "tab";
+    changeText("");
+}
+
+function canvPD(e){
+    if (nowStatus.drawEnable == false){
+        nowStatus.drawActive = false; return;
+    }
+    nowStatus.drawActive = true;
+    e.currentTarget.addEventListener("pointerup", canvCancel);
+    e.currentTarget.addEventListener("pointerout", canvCancel);
+    
+    e.currentTarget.addEventListener("pointermove", canvPM);
+
+    nowStatus.nowCanv = e.currentTarget;
+    nowStatus.ctx = e.currentTarget.getContext("2d");
+
+    if (this.setLastTime != undefined){
+        clearTimeout(this.setLastTime);
+    }
+    this.setLastTime = undefined;
+
+    e.currentTarget.removeEventListener("pointerdown", canvPD);
+}
+
+function canvCancel(e){
+    nowStatus.drawActive = false;
+    e.currentTarget.addEventListener("pointerdown", canvPD);
+
+    nowStatus.ctx = undefined;
+    nowStatus.lastPointX = -1;
+    nowStatus.lastPointY = -1;
+
+    e.currentTarget.removeEventListener("pointermove", canvPM);
+
+    e.currentTarget.removeEventListener("pointerup", canvCancel);
+    e.currentTarget.removeEventListener("pointerout", canvCancel);
+}
+
+function canvPM(e){
+    if (nowStatus.drawActive == false) {return;}
+    nowStatus.ctx.lineWidth = 2; nowStatus.ctx.lineCap = "round"; 
+    nowStatus.ctx.strokeStyle = "rgba(0,0,0,"+String(e.pressure.toFixed(1))+")";
+    nowStatus.ctx.beginPath();
+    nowStatus.ctx.moveTo(nowStatus.lastPointX, nowStatus.lastPointY);
+    if (nowStatus.lastPointX == -1){
+        nowStatus.ctx.moveTo(e.offsetX, e.offsetY);
+    }
+    nowStatus.ctx.lineTo(e.offsetX, e.offsetY);
+    nowStatus.ctx.stroke();
+
+    nowStatus.lastPointX = e.offsetX; nowStatus.lastPointY = e.offsetY; 
+    if (this.setLastTime != undefined){
+        clearTimeout(this.setLastTime);
+    }
+    
+    this.setLastTime = setTimeout(processOCR, 2000);
+}
+
+function processOCR(){
+    nowStatus.drwaEnable = false;
+    txtimg = nowStatus.nowCanv.toDataURL();
+    console.log(txtimg);
+    changeText("test");
+}
+
+function changeText(addtext){
+    outcol = txt.length;
+    if (nowStatus.insert == true){
+        outcol = nowStatus.insertStart;
+    }
+    
+    vscode.postMessage({
+        type: "textadd",
+        value: addtext,
+        line: nowStatus.lineNum,
+        col: outcol,
+        append: nowStatus.appendSize
+    });
+}
+
+window.addEventListener('message', event => {
+    const message = event.data;
+
+    switch (message.type){
+        case 'lineCurser':
+            setSsuekSsuek(message.lineT, message.lineN, message.colN);
+        break;
+    }
+});
+
+document.addEventListener("DOMContentLoaded", () => {
+    //setSsuekSsuek(txt, -1, -1);
+});
     </script>
 </body>
-</html>
-		`;
+</html>`;
 	}
 }
