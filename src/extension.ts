@@ -1,8 +1,6 @@
 import * as vscode from 'vscode';
 
 export function activate(context: vscode.ExtensionContext) {
-	console.log('Congratulations, your extension "sseuksseukpanel-vscode" is now active!');
-
 	const provider = new SseukSseukPanel(context.extensionUri);
 
 	context.subscriptions.push(
@@ -131,6 +129,7 @@ body{
 section#sys{
     display: none;
 }
+
 #EditBox{
     background-color: var(--backgroundC);
     color: var(--elementC);
@@ -138,8 +137,8 @@ section#sys{
     flex-direction: row;
     font-family: Consolas, monospace;
     font-size: 18px;
-    height: 5em; width: 100%;
-    border-bottom: 1px solid var(--elementC);
+    height: 5em; min-width: 100%;
+    margin-top: 32px;
 }
 
 #textArea{
@@ -193,11 +192,14 @@ section#sys{
 }
 #appendTab{
     flex: 1;
+    width: 80vw;
 }
 
 #toolArea{
+    position: fixed;
+    top: 0; left: 0;
     font-weight: bolder;
-    width: 100%; height: 24px;
+    width: 100%; height: 32px;
     display: flex;
 }
 
@@ -291,9 +293,7 @@ let nowStatus = undefined;
 const RefTa = document.querySelector("#sys > #toolArea");
 const RefEb = document.querySelector("#sys > #EditBox");
 let backgC;
-let backgC_RGB;
 let elemC;
-let elemC_RGB;
 
 const vscode = acquireVsCodeApi();
 
@@ -392,13 +392,16 @@ class status{
         newCanv.height = newCanv.offsetHeight;
     }
     displayLoading(){
-        document.querySelector("#toolArea #loading").classList.add("active");
+        document.querySelector("#output > #toolArea #loading").classList.add("active");
     }
 }
 
 function setSsuekSsuek(text, line, col){
-    if (nowStatus != undefined){delete nowStatus;}
-    if (activeProcess != undefined){clearTimeout(activeProcess);}
+    if (nowStatus != undefined){
+        if (nowStatus.setLastTime != undefined){ clearTimeout(setLastTime); }
+        delete nowStatus;
+    }
+    if (activeProcess != undefined){ clearTimeout(activeProcess); }
     document.getElementById("output").innerHTML = "";
     
     // Tool박스 이벤트 지정.
@@ -416,6 +419,7 @@ function setSsuekSsuek(text, line, col){
     for (char of text){
         eEbTc = newEbTc.cloneNode(true); 
         eEbTc.id = "t" + charnum; eEbTc.innerText = char;
+        if (charnum == col){ eEbTc.classList.add("targetCol"); }
         eEbTc.addEventListener("pointerdown", selectPD);
         newEbTa.appendChild(eEbTc);
         eEbIc = newEbIc.cloneNode(true);
@@ -428,6 +432,14 @@ function setSsuekSsuek(text, line, col){
     newEbAs.addEventListener("pointerdown", appsPD);
     newEbAt.addEventListener("pointerdown", apptPD);
     nowStatus = new status(newEb, line, col);
+
+    newEbAb.scrollIntoView({inline: "start"});
+
+    tcol = document.querySelector(".targetCol");
+    if (tcol != undefined){
+        tcol.scrollIntoView({inline: "center"});
+    }
+
     txt = text; lastline = line; lastcol = col;
 }
 
@@ -541,10 +553,10 @@ function canvPM(e){
         clearTimeout(this.setLastTime);
     }
     
-    this.setLastTime = setTimeout(processOCR, 2000);
+    this.setLastTime = setTimeout(canv2img, 2000);
 }
 
-function processOCR(){
+function canv2img(){
     nowStatus.drwaEnable = false;
     nowStatus.displayLoading();
     txtimg = nowStatus.nowCanv.toDataURL();
@@ -568,16 +580,6 @@ function changeText(addtext){
         col: outcol,
         append: nowStatus.appendSize
     });
-}
-
-function HexToRGB(hex){
-    shex = hex.slice(1);
-    dec = parseInt(shex, 16);
-    r = (dec >> 16) & 255;
-    g = (dec >> 8) & 255;
-    b = dec & 255;
-
-    return r+","+g+","+b;
 }
 
 window.addEventListener('message', event => {
