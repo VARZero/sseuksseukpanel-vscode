@@ -15,6 +15,12 @@ export function activate(context: vscode.ExtensionContext) {
         provider.lineCursor(lineT, lineN, colN);
 	});
 
+    context.subscriptions.push(
+		vscode.commands.registerCommand('SseukSseuk.suggest', () => {
+            vscode.commands.executeCommand("editor.action.triggerSuggest");
+		})
+	);
+
 	context.subscriptions.push(
 		vscode.commands.registerCommand('SseukSseuk.undo', () => {
             vscode.commands.executeCommand("undo");
@@ -127,6 +133,7 @@ section#sys{
 }
 #EditBox{
     background-color: var(--backgroundC);
+    color: var(--elementC);
     display: flex;
     flex-direction: row;
     font-family: Consolas, monospace;
@@ -276,15 +283,17 @@ canvas{
             </div>
         </div>
     </section>
-    <section id="output">
-    </section>
+    <section id="output"></section>
     <script>
 let txt = "te xts"; let lastline = -1; let lastcol = -1;
+let activeProcess = undefined;
 let nowStatus = undefined;
 const RefTa = document.querySelector("#sys > #toolArea");
 const RefEb = document.querySelector("#sys > #EditBox");
-const backgC = getComputedStyle(document.body).getPropertyValue('--backgroundC');
-const elemC = getComputedStyle(document.body).getPropertyValue('--elementC');
+let backgC;
+let backgC_RGB;
+let elemC;
+let elemC_RGB;
 
 const vscode = acquireVsCodeApi();
 
@@ -382,10 +391,14 @@ class status{
         newCanv.width = newCanv.offsetWidth;
         newCanv.height = newCanv.offsetHeight;
     }
+    displayLoading(){
+        document.querySelector("#toolArea #loading").classList.add("active");
+    }
 }
 
 function setSsuekSsuek(text, line, col){
     if (nowStatus != undefined){delete nowStatus;}
+    if (activeProcess != undefined){clearTimeout(activeProcess);}
     document.getElementById("output").innerHTML = "";
     
     // Tool박스 이벤트 지정.
@@ -514,7 +527,7 @@ function canvCancel(e){
 function canvPM(e){
     if (nowStatus.drawActive == false) {return;}
     nowStatus.ctx.lineWidth = 2; nowStatus.ctx.lineCap = "round"; 
-    nowStatus.ctx.strokeStyle = "rgba(0,0,0,"+String(e.pressure.toFixed(1))+")";
+    nowStatus.ctx.strokeStyle = elemC.slice(0, -1) +","+String(e.pressure.toFixed(1))+")";
     nowStatus.ctx.beginPath();
     nowStatus.ctx.moveTo(nowStatus.lastPointX, nowStatus.lastPointY);
     if (nowStatus.lastPointX == -1){
@@ -533,9 +546,13 @@ function canvPM(e){
 
 function processOCR(){
     nowStatus.drwaEnable = false;
+    nowStatus.displayLoading();
     txtimg = nowStatus.nowCanv.toDataURL();
     console.log(txtimg);
-    changeText("test");
+
+    //TODO // 텍스트 처리 함수로 넘기기.
+
+    activeProcess = setTimeout(() => {changeText("test");}, 2000);
 }
 
 function changeText(addtext){
@@ -553,6 +570,16 @@ function changeText(addtext){
     });
 }
 
+function HexToRGB(hex){
+    shex = hex.slice(1);
+    dec = parseInt(shex, 16);
+    r = (dec >> 16) & 255;
+    g = (dec >> 8) & 255;
+    b = dec & 255;
+
+    return r+","+g+","+b;
+}
+
 window.addEventListener('message', event => {
     const message = event.data;
 
@@ -564,7 +591,8 @@ window.addEventListener('message', event => {
 });
 
 document.addEventListener("DOMContentLoaded", () => {
-    //setSsuekSsuek(txt, -1, -1);
+    backgC = getComputedStyle(RefEb).getPropertyValue('background-color');
+    elemC = getComputedStyle(RefEb).getPropertyValue('color');
 });
     </script>
 </body>
