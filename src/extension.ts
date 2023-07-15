@@ -163,6 +163,7 @@ section#sys{
     display: flex;
 }
 .insertChar{
+    border-bottom: 1px solid var(--elementC);
     position: relative;
     white-space: pre;
     color: var(--backgroundC);
