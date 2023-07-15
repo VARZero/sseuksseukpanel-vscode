@@ -204,6 +204,7 @@ section#sys{
 }
 
 #loading{
+    padding-top: 0.5em;
     margin-right: 4px;
     opacity: 0;
 }
@@ -231,6 +232,7 @@ section#sys{
 .tools{
     color: var(--backgroundC);
     background-color: var(--elementC);
+    padding-top: 0.5em;
     margin-right: 4px;
     padding-left: 1em;
     padding-right: 1em;
