@@ -3,6 +3,9 @@ import * as vscode from 'vscode';
 export function activate(context: vscode.ExtensionContext) {
 	const provider = new SseukSseukPanel(context.extensionUri);
 
+    var sseSettings = vscode.workspace.getConfiguration('SseukSseuk');
+    console.log(sseSettings);
+
 	context.subscriptions.push(
 		vscode.window.registerWebviewViewProvider(SseukSseukPanel.viewType, provider));
 
