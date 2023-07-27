@@ -116,8 +116,8 @@ class SseukSseukPanel implements vscode.WebviewViewProvider{
 	}
 
 	private _getSSPHtmlWebview(webview: vscode.Webview) {
-        const opencvjsUri = webview.asWebviewUri(vscode.Uri.joinPath(this._extensionUri, 'media', 'js/opencv.js'));
-        const tfUri = webview.asWebviewUri(vscode.Uri.joinPath(this._extensionUri, 'media', 'js/tf.min.js'));
+        const opencvjsUri = webview.asWebviewUri(vscode.Uri.joinPath(this._extensionUri, 'media', 'opencv.js'));
+        const tfUri = webview.asWebviewUri(vscode.Uri.joinPath(this._extensionUri, 'media', 'tf.min.js'));
 
 		return `<!DOCTYPE html>
 <html lang="en">
@@ -536,7 +536,7 @@ function canvCancel(e){
     nowStatus.drawActive = false;
     e.currentTarget.addEventListener("pointerdown", canvPD);
 
-    nowStatus.ctx = undefined;
+    //nowStatus.ctx = undefined;
     nowStatus.lastPointX = -1;
     nowStatus.lastPointY = -1;
 
@@ -567,12 +567,14 @@ function canvPM(e){
 }
 
 function canv2img(){
-    nowStatus.drwaEnable = false;
+    nowStatus.drawEnable = false;
     nowStatus.displayLoading();
     txtimg = nowStatus.nowCanv.toDataURL();
     console.log(txtimg);
+    let txtData = nowStatus.ctx.getImageData(0, 0, nowStatus.nowCanv.width, nowStatus.nowCanv.height);
 
     //TODO // 텍스트 처리 함수로 넘기기.
+    ssp_ocr(txtData)
 
     activeProcess = setTimeout(() => {changeText("test");}, 2000);
 }
@@ -593,7 +595,9 @@ function changeText(addtext){
 }
 
 function ssp_ocr(imgSource) {
-    let txtimg = cv.imread(imgSource, cv.IMREAD_UNCHANGED);
+    let chars = Array(); let charImgs = Array();
+
+    let txtimg = cv.matFromImageData(imgSource);
     let rgbaP = new cv.MatVector();
 
     cv.split(txtimg, rgbaP);
@@ -668,8 +672,6 @@ function ssp_ocr(imgSource) {
     }
     
     console.log(charImgs);
-
-    cv.imshow('canvasOutput', thImg);
 
     txtimg.delete(); rgbaP.delete(); alphaChannel.delete();
     thImg.delete(); cnt.delete(); hiec.delete();
