@@ -138,6 +138,7 @@ canvas{
 #ref{display: none;}
     </style>
     <title>SseukSsuek Panel</title>
+    <script src=""></script>
 </head>
 <body>
     <section id="sys">
@@ -469,6 +470,89 @@ function changeText(addtext){
         append: nowStatus.appendSize
     });
 }
+
+function ssp_ocr(imgSource) {
+    let txtimg = cv.imread(imgSource, cv.IMREAD_UNCHANGED);
+    let rgbaP = new cv.MatVector();
+
+    cv.split(txtimg, rgbaP);
+    let alphaChannel = rgbaP.get(3);
+
+    let thImg = new cv.Mat();
+    cv.threshold(alphaChannel, thImg, 1, 255, 0);
+    
+    let cnt = new cv.MatVector(); let hiec = new cv.Mat();
+    cv.findContours(thImg, cnt, hiec, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE);
+
+    let pre_rects = Array(); let rects = Array();
+    for(let c = 0; c < cnt.size(); c++){
+        let rect = cv.boundingRect(cnt.get(c));
+        pre_rects.push(rect);
+    }
+    pre_rects.sort((a,b) => {return a.x - b.x})
+
+    for (prt of pre_rects){
+        rects.push(prt);
+        for (let b = 0; b < rects.length-1; b++){
+            let nowBox = rects[b];
+            if (prt.x > (nowBox.x+nowBox.width)) continue;
+            else if ((prt.x+prt.width) < nowBox.x) break;
+
+            rects.pop();
+            if (prt.x <= nowBox.x) rects[b].x = prt.x;
+            else if ((prt.x+prt.width) >= (nowBox.x+nowBox.width)){
+                rects[b].x = prt.x;
+                rects[b].width = prt.width;
+            }
+        }
+    }
+
+    for (let i = 0; i < rects.length; i++){
+        blackImg = new cv.Mat()
+
+        charOneImg = new cv.Mat();
+        let area = new cv.Rect(rects[i].x, 0, rects[i].x+rects[i].width, rects[i].y+rects[i].height);
+        charOneImg = thImg.roi(area);
+        
+        let wth = parseInt(28 * (rects[i].width/(rects[i].y+rects[i].height)));
+        let borderL = parseInt((28-wth)/2);
+        let borderR = (wth % 2) ? borderL+1 : borderL ;
+
+        let dsize = new cv.Size(wth, 28);
+        cv.resize(charOneImg, charOneImg, dsize, 0, 0, cv.INTER_AREA);
+        if (wth < 28){
+            let blk = new cv.Scalar(0);
+            cv.copyMakeBorder(charOneImg, charOneImg, 0,0, borderL, borderR, cv.BORDER_CONSTANT, blk)
+        }
+        else{
+            let rdsize = new cv.Size(28, 28);
+            cv.resize(charOneImg, charOneImg, rdsize, 0, 0, cv.INTER_AREA);
+        }
+
+        let Img_array = [];
+        for (let i = 0; i < charOneImg.cols; i++) {
+            let rowArray = [];
+            for (let j = 0; j < charOneImg.rows; j++) {
+                let pixel = [];
+                for (let k = 0; k < charOneImg.channels(); k++) {
+                    pixel.push(charOneImg.ucharPtr(i, j)[k]);
+                }
+                rowArray.push(pixel);
+            }
+            Img_array.push(rowArray);
+        }
+
+        charImgs.push(Img_array);
+        charOneImg.delete();
+    }
+    
+    console.log(charImgs);
+
+    cv.imshow('canvasOutput', thImg);
+
+    txtimg.delete(); rgbaP.delete(); alphaChannel.delete();
+    thImg.delete(); cnt.delete(); hiec.delete();
+};
 
 window.addEventListener('message', event => {
     const message = event.data;
