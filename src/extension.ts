@@ -3,18 +3,8 @@ import * as vscode from 'vscode';
 export function activate(context: vscode.ExtensionContext) {
 	const provider = new SseukSseukPanel(context.extensionUri);
 
-    var sseSettings = vscode.workspace.getConfiguration('SseukSseuk');
-    console.log(sseSettings); //세팅 정보 제공하기. + html에다가 스타일러스만 인식시키게 하기
-
 	context.subscriptions.push(
 		vscode.window.registerWebviewViewProvider(SseukSseukPanel.viewType, provider));
-
-    vscode.window.onDidChangeActiveTextEditor(function(ed) { //여기서 탭사이즈 가져오기
-        if (!ed) {
-            return;
-        }
-        console.log(ed.options);
-    });
 
 	vscode.window.onDidChangeTextEditorSelection((e) => {
         var lineN = e.selections[0].active.line;
@@ -22,6 +12,12 @@ export function activate(context: vscode.ExtensionContext) {
         var lineT = vscode.window.activeTextEditor?.document.lineAt(vscode.window.activeTextEditor.selection.active.line).text;
         provider.lineCursor(lineT, lineN, colN);
 	});
+
+    vscode.workspace.onDidChangeConfiguration((e) => {
+        if (e.affectsConfiguration("SseukSseuk.charSize") || e.affectsConfiguration("SseukSseuk.inputDelayTime") || e.affectsConfiguration("SseukSseuk.stylusType")){
+            vscode.commands.executeCommand("workbench.action.webview.reloadWebviewAction");
+        }
+    });
 
     context.subscriptions.push(
 		vscode.commands.registerCommand('SseukSseuk.suggest', () => {
@@ -60,8 +56,8 @@ class SseukSseukPanel implements vscode.WebviewViewProvider{
 	private _view?: vscode.WebviewView;
 
 	constructor(
-		private readonly _extensionUri: vscode.Uri,
-	 ) {	}
+		private readonly _extensionUri: vscode.Uri
+	 ) {    }
 
 	public resolveWebviewView(
 	  webviewView: vscode.WebviewView, 
@@ -82,12 +78,14 @@ class SseukSseukPanel implements vscode.WebviewViewProvider{
         webviewView.webview.onDidReceiveMessage(data => {
 			switch (data.type) {
 				case 'textadd':
+                    var tabsize = Number( vscode.workspace.getConfiguration('editor').get('tabSize') ); var tabString = "";
+                    for (var c = 0; c < tabsize; c++){ tabString += " "; }
                     var txtout = "";
                     switch(data.append){
                         case 'none': break;
                         case 'behind': break;
                         case 'space': txtout += " "; break;
-                        case 'tab': txtout += "    "; break;
+                        case 'tab': txtout += tabString; break;
                     }
                     txtout += data.value;
 					vscode.window.activeTextEditor?.insertSnippet(new vscode.SnippetString(txtout), // (TODO) 이부분은 나중에 VSCode 내부 API로도 받을수 있게 하기! 
@@ -123,6 +121,13 @@ class SseukSseukPanel implements vscode.WebviewViewProvider{
 	}
 
 	private _getSSPHtmlWebview(webview: vscode.Webview) {
+        console.log("a");
+        var sspSettings = vscode.workspace.getConfiguration('SseukSseuk');
+
+        var stylus = (sspSettings.stylusType === "stylus") || (sspSettings.stylusType === "non-hover stylus");
+        var charsize = sspSettings.charSize; var inputDelayTime = sspSettings.inputDelayTime;
+        var hover = sspSettings.stylusType === "non-hover stylus";
+
         const opencvjsUri = webview.asWebviewUri(vscode.Uri.joinPath(this._extensionUri, 'media', 'opencv.js'));
         const tfUri = webview.asWebviewUri(vscode.Uri.joinPath(this._extensionUri, 'media', 'tf.min.js'));
 
@@ -149,9 +154,9 @@ section#sys{
     display: flex;
     flex-direction: row;
     font-family: Consolas, monospace;
-    font-size: 18px;
+    font-size: ${String(charsize)}px;
     height: 5em; min-width: 100%;
-    margin-top: 32px;
+    margin-top: 2em;
 }
 
 #textArea{
@@ -213,7 +218,7 @@ section#sys{
     position: fixed;
     top: 0; left: 0;
     font-weight: bolder;
-    width: 100%; height: 32px;
+    width: 100%; height: 2em;
     display: flex;
 }
 
@@ -310,6 +315,8 @@ const RefTa = document.querySelector("#sys > #toolArea");
 const RefEb = document.querySelector("#sys > #EditBox");
 let backgC;
 let elemC;
+let stylus = ${stylus};
+let delayTime = ${inputDelayTime};
 
 const vscode = acquireVsCodeApi();
 
@@ -460,22 +467,27 @@ function setSsuekSsuek(text, line, col){
 }
 
 function selectPD(e){
+    if (stylus && e.pointerType != "pen"){return;} 
     nowStatus.activeEB("select", e.currentTarget, "");
 }
 
 function insertPD(e){
+    if (stylus && e.pointerType != "pen"){return;} 
     nowStatus.activeEB("insert", e.currentTarget, "");
 }
 
 function appbPD(e){
+    if (stylus && e.pointerType != "pen"){return;} 
     nowStatus.activeEB("append", e.currentTarget, "behind");
 }
 
 function appsPD(e){
+    if (stylus && e.pointerType != "pen"){return;} 
     nowStatus.activeEB("append", e.currentTarget, "space");
 }
 
 function apptPD(e){
+    if (stylus && e.pointerType != "pen"){return;} 
     nowStatus.activeEB("append", e.currentTarget, "tab");
 }
 
@@ -518,6 +530,8 @@ function tool_tab(){
 }
 
 function canvPD(e){
+    console.log(stylus)
+    if (stylus && e.pointerType != "pen"){return;} 
     if (nowStatus.drawEnable == false){
         nowStatus.drawActive = false; return;
     }
@@ -569,7 +583,7 @@ function canvPM(e){
         clearTimeout(nowStatus.setLastTime);
     }
     
-    nowStatus.setLastTime = setTimeout(canv2img, 2000);
+    nowStatus.setLastTime = setTimeout(canv2img, delayTime);
 }
 
 function canv2img(){
@@ -582,7 +596,7 @@ function canv2img(){
     //TODO // 텍스트 처리 함수로 넘기기.
     ssp_ocr(txtData)
 
-    activeProcess = setTimeout(() => {changeText("test");}, 2000);
+    activeProcess = setTimeout(() => {changeText("test");}, delayTime);
 }
 
 function changeText(addtext){

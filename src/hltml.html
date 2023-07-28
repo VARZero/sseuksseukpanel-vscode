@@ -23,7 +23,7 @@ section#sys{
     font-family: Consolas, monospace;
     font-size: 18px;
     height: 5em; min-width: 100%;
-    margin-top: 32px;
+    margin-top: 2em;
 }
 
 #textArea{
@@ -85,7 +85,7 @@ section#sys{
     position: fixed;
     top: 0; left: 0;
     font-weight: bolder;
-    width: 100%; height: 32px;
+    width: 100%; height: 2em;
     display: flex;
 }
 
@@ -182,6 +182,8 @@ const RefTa = document.querySelector("#sys > #toolArea");
 const RefEb = document.querySelector("#sys > #EditBox");
 let backgC;
 let elemC;
+let stylus = false;
+let delayTime = 2000;
 
 const vscode = acquireVsCodeApi();
 
@@ -332,22 +334,27 @@ function setSsuekSsuek(text, line, col){
 }
 
 function selectPD(e){
+    if (stylus && e.pointerType != "pen"){return;} 
     nowStatus.activeEB("select", e.currentTarget, "");
 }
 
 function insertPD(e){
+    if (stylus && e.pointerType != "pen"){return;} 
     nowStatus.activeEB("insert", e.currentTarget, "");
 }
 
 function appbPD(e){
+    if (stylus && e.pointerType != "pen"){return;} 
     nowStatus.activeEB("append", e.currentTarget, "behind");
 }
 
 function appsPD(e){
+    if (stylus && e.pointerType != "pen"){return;} 
     nowStatus.activeEB("append", e.currentTarget, "space");
 }
 
 function apptPD(e){
+    if (stylus && e.pointerType != "pen"){return;} 
     nowStatus.activeEB("append", e.currentTarget, "tab");
 }
 
@@ -390,6 +397,7 @@ function tool_tab(){
 }
 
 function canvPD(e){
+    if (stylus && e.pointerType != "pen"){return;} 
     if (nowStatus.drawEnable == false){
         nowStatus.drawActive = false; return;
     }
@@ -441,7 +449,7 @@ function canvPM(e){
         clearTimeout(nowStatus.setLastTime);
     }
     
-    nowStatus.setLastTime = setTimeout(canv2img, 2000);
+    nowStatus.setLastTime = setTimeout(canv2img, delayTime);
 }
 
 function canv2img(){
@@ -454,7 +462,7 @@ function canv2img(){
     //TODO // 텍스트 처리 함수로 넘기기.
     ssp_ocr(txtData)
 
-    activeProcess = setTimeout(() => {changeText("test");}, 2000);
+    activeProcess = setTimeout(() => {changeText("test");}, delayTime);
 }
 
 function changeText(addtext){
