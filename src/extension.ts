@@ -4,10 +4,17 @@ export function activate(context: vscode.ExtensionContext) {
 	const provider = new SseukSseukPanel(context.extensionUri);
 
     var sseSettings = vscode.workspace.getConfiguration('SseukSseuk');
-    console.log(sseSettings);
+    console.log(sseSettings); //세팅 정보 제공하기. + html에다가 스타일러스만 인식시키게 하기
 
 	context.subscriptions.push(
 		vscode.window.registerWebviewViewProvider(SseukSseukPanel.viewType, provider));
+
+    vscode.window.onDidChangeActiveTextEditor(function(ed) { //여기서 탭사이즈 가져오기
+        if (!ed) {
+            return;
+        }
+        console.log(ed.options);
+    });
 
 	vscode.window.onDidChangeTextEditorSelection((e) => {
         var lineN = e.selections[0].active.line;
@@ -243,7 +250,6 @@ section#sys{
     margin-right: 4px;
     padding-left: 1em;
     padding-right: 1em;
-    border: 1px solid ;
 }
 
 canvas{
@@ -408,7 +414,7 @@ class status{
 
 function setSsuekSsuek(text, line, col){
     if (nowStatus != undefined){
-        if (nowStatus.setLastTime != undefined){ clearTimeout(setLastTime); }
+        if (nowStatus.setLastTime != undefined){ clearTimeout(nowStatus.setLastTime); }
         delete nowStatus;
     }
     if (activeProcess != undefined){ clearTimeout(activeProcess); }
@@ -524,10 +530,10 @@ function canvPD(e){
     nowStatus.nowCanv = e.currentTarget;
     nowStatus.ctx = e.currentTarget.getContext("2d");
 
-    if (this.setLastTime != undefined){
-        clearTimeout(this.setLastTime);
+    if (nowStatus.setLastTime != undefined){
+        clearTimeout(nowStatus.setLastTime);
     }
-    this.setLastTime = undefined;
+    nowStatus.setLastTime = undefined;
 
     e.currentTarget.removeEventListener("pointerdown", canvPD);
 }
@@ -559,11 +565,11 @@ function canvPM(e){
     nowStatus.ctx.stroke();
 
     nowStatus.lastPointX = e.offsetX; nowStatus.lastPointY = e.offsetY; 
-    if (this.setLastTime != undefined){
-        clearTimeout(this.setLastTime);
+    if (nowStatus.setLastTime != undefined){
+        clearTimeout(nowStatus.setLastTime);
     }
     
-    this.setLastTime = setTimeout(canv2img, 2000);
+    nowStatus.setLastTime = setTimeout(canv2img, 2000);
 }
 
 function canv2img(){
