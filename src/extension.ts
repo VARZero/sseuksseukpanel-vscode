@@ -126,10 +126,11 @@ class SseukSseukPanel implements vscode.WebviewViewProvider{
 
         var stylus = (sspSettings.stylusType === "stylus") || (sspSettings.stylusType === "non-hover stylus");
         var charsize = sspSettings.charSize; var inputDelayTime = sspSettings.inputDelayTime;
-        var hover = sspSettings.stylusType === "non-hover stylus";
+        var hover = (sspSettings.stylusType === "non-hover stylus") ? "0" : "0.2";
 
         const opencvjsUri = webview.asWebviewUri(vscode.Uri.joinPath(this._extensionUri, 'media', 'opencv.js'));
         const tfUri = webview.asWebviewUri(vscode.Uri.joinPath(this._extensionUri, 'media', 'tf.min.js'));
+        const modelUri = webview.asWebviewUri(vscode.Uri.joinPath(this._extensionUri, 'media', 'convjs/model.json'));
 
 		return `<!DOCTYPE html>
 <html lang="en">
@@ -271,6 +272,7 @@ canvas{
     </style>
     <title>SseukSsuek Panel</title>
     <script src="${opencvjsUri}"></script>
+    <script src="${tfUri}"></script>
 </head>
 <body>
     <section id="sys">
@@ -594,9 +596,7 @@ function canv2img(){
     let txtData = nowStatus.ctx.getImageData(0, 0, nowStatus.nowCanv.width, nowStatus.nowCanv.height);
 
     //TODO // 텍스트 처리 함수로 넘기기.
-    ssp_ocr(txtData)
-
-    activeProcess = setTimeout(() => {changeText("test");}, delayTime);
+    ssp_ocr(txtData);
 }
 
 function changeText(addtext){
@@ -675,19 +675,20 @@ function ssp_ocr(imgSource) {
         }
 
         let Img_array = [];
-        for (let i = 0; i < charOneImg.cols; i++) {
-            let rowArray = [];
-            for (let j = 0; j < charOneImg.rows; j++) {
+        for (let i = 0; i < charOneImg.rows; i++) {
+            let colArray = [];
+            for (let j = 0; j < charOneImg.cols; j++) {
                 let pixel = [];
                 for (let k = 0; k < charOneImg.channels(); k++) {
-                    pixel.push(charOneImg.ucharPtr(i, j)[k]);
+                    pixel.push((charOneImg.ucharPtr(i, j)[k])/255);
                 }
-                rowArray.push(pixel);
+                colArray.push(pixel[0]);
             }
-            Img_array.push(rowArray);
+            Img_array.push(colArray);
+            box = []; box.push(Img_array);
         }
 
-        charImgs.push(Img_array);
+        charImgs.push(box);
         charOneImg.delete();
     }
     
@@ -695,6 +696,8 @@ function ssp_ocr(imgSource) {
 
     txtimg.delete(); rgbaP.delete(); alphaChannel.delete();
     thImg.delete(); cnt.delete(); hiec.delete();
+
+    predictChar(charImgs)
 };
 
 window.addEventListener('message', event => {
@@ -706,6 +709,21 @@ window.addEventListener('message', event => {
         break;
     }
 });
+
+async function predictChar(Imgs){
+    chars = [];
+    const tfmodel = await tf.loadLayersModel('${modelUri}')
+    for (let i = 0; i < Imgs.length; i++){
+        console.log(Imgs[i]);
+        var inp = tf.tensor(Imgs[i]);
+        p = tfmodel.predict(inp).arraySync()[0];
+        k = Math.max.apply(null, p);
+        charV = p.indexOf(k);
+        chars.push(String.fromCharCode(Number(charV)+32));
+    }
+    console.log(chars)
+    changeText(chars);
+}
 
 document.addEventListener("DOMContentLoaded", () => {
     backgC = getComputedStyle(RefEb).getPropertyValue('background-color');

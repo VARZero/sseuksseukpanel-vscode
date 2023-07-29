@@ -21,7 +21,7 @@ section#sys{
     display: flex;
     flex-direction: row;
     font-family: Consolas, monospace;
-    font-size: 18px;
+    font-size: ${String(charsize)}px;
     height: 5em; min-width: 100%;
     margin-top: 2em;
 }
@@ -52,6 +52,7 @@ section#sys{
     position: relative;
     white-space: pre;
     color: var(--backgroundC);
+    border-left: 0px dashed var(--elementC);
 }
 .insertChar.active{
     border-left: 1px dashed var(--elementC);
@@ -69,6 +70,7 @@ section#sys{
 .appendEle{
     position: relative;
     white-space: pre;
+    border-left: 0px dashed var(--elementC);
 }
 .appendEle.active{
     border-left: 1px dashed var(--elementC);
@@ -137,7 +139,7 @@ canvas{
 #ref{display: none;}
     </style>
     <title>SseukSsuek Panel</title>
-    <script src=""></script>
+    <script src="${opencvjsUri}"></script>
 </head>
 <body>
     <section id="sys">
@@ -182,8 +184,8 @@ const RefTa = document.querySelector("#sys > #toolArea");
 const RefEb = document.querySelector("#sys > #EditBox");
 let backgC;
 let elemC;
-let stylus = false;
-let delayTime = 2000;
+let stylus = ${stylus};
+let delayTime = ${inputDelayTime};
 
 const vscode = acquireVsCodeApi();
 
@@ -397,6 +399,7 @@ function tool_tab(){
 }
 
 function canvPD(e){
+    console.log(stylus)
     if (stylus && e.pointerType != "pen"){return;} 
     if (nowStatus.drawEnable == false){
         nowStatus.drawActive = false; return;
