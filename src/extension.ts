@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 
 export function activate(context: vscode.ExtensionContext) {
-	const provider = new SseukSseukPanel(context.extensionUri);
+	let provider = new SseukSseukPanel(context.extensionUri);
 
 	context.subscriptions.push(
 		vscode.window.registerWebviewViewProvider(SseukSseukPanel.viewType, provider));
@@ -121,12 +121,12 @@ class SseukSseukPanel implements vscode.WebviewViewProvider{
 	}
 
 	private _getSSPHtmlWebview(webview: vscode.Webview) {
-        console.log("a");
         var sspSettings = vscode.workspace.getConfiguration('SseukSseuk');
 
         var stylus = (sspSettings.stylusType === "stylus") || (sspSettings.stylusType === "non-hover stylus");
         var charsize = sspSettings.charSize; var inputDelayTime = sspSettings.inputDelayTime;
-        var hover = (sspSettings.stylusType === "non-hover stylus") ? "0" : "0.2";
+        var hover = (sspSettings.stylusType === "non-hover stylus") ? "1" : "0";
+        console.log(hover);
 
         const opencvjsUri = webview.asWebviewUri(vscode.Uri.joinPath(this._extensionUri, 'media', 'opencv.js'));
         const tfUri = webview.asWebviewUri(vscode.Uri.joinPath(this._extensionUri, 'media', 'tf.min.js'));
@@ -210,9 +210,13 @@ section#sys{
 #EditBox.NonActive .appendEle:hover{
     border-left: 1px dashed var(--elementC);
 }
+#appendSpace{
+    border-left: ${hover}px dashed var(--elementC);
+}
 #appendTab{
     flex: 1;
     width: 80vw;
+    border-left: ${hover}px dashed var(--elementC);
 }
 
 #toolArea{
@@ -378,7 +382,6 @@ class status{
                         this.selectStart = this.selectEnd;
                         this.selectEnd = temp;
                     }
-                    console.log(this.selectStart); console.log(this.selectEnd);
                     for (let selEle of this.targetEB.children[0].children[0].children){
                         selEle.removeEventListener("pointerdown", selectPD);
                     }
@@ -532,7 +535,6 @@ function tool_tab(){
 }
 
 function canvPD(e){
-    console.log(stylus)
     if (stylus && e.pointerType != "pen"){return;} 
     if (nowStatus.drawEnable == false){
         nowStatus.drawActive = false; return;
@@ -592,7 +594,6 @@ function canv2img(){
     nowStatus.drawEnable = false;
     nowStatus.displayLoading();
     txtimg = nowStatus.nowCanv.toDataURL();
-    console.log(txtimg);
     let txtData = nowStatus.ctx.getImageData(0, 0, nowStatus.nowCanv.width, nowStatus.nowCanv.height);
 
     //TODO // 텍스트 처리 함수로 넘기기.
@@ -652,11 +653,15 @@ function ssp_ocr(imgSource) {
         }
     }
 
+    let smax = 0;
+
     for (let i = 0; i < rects.length; i++){
+        if (smax < rects[i].width){ smax = rects[i].width; }
+
         blackImg = new cv.Mat()
 
         charOneImg = new cv.Mat();
-        let area = new cv.Rect(rects[i].x, 0, rects[i].x+rects[i].width, rects[i].y+rects[i].height);
+        let area = new cv.Rect(rects[i].x, 0, rects[i].width, rects[i].y+rects[i].height);
         charOneImg = thImg.roi(area);
         
         let wth = parseInt(28 * (rects[i].width/(rects[i].y+rects[i].height)));
@@ -680,7 +685,7 @@ function ssp_ocr(imgSource) {
             for (let j = 0; j < charOneImg.cols; j++) {
                 let pixel = [];
                 for (let k = 0; k < charOneImg.channels(); k++) {
-                    pixel.push((charOneImg.ucharPtr(i, j)[k])/255);
+                    pixel.push((charOneImg.ucharPtr(j, i)[k])/255);
                 }
                 colArray.push(pixel[0]);
             }
@@ -691,13 +696,17 @@ function ssp_ocr(imgSource) {
         charImgs.push(box);
         charOneImg.delete();
     }
-    
-    console.log(charImgs);
+
+    let spaceIndex = [];
+    for (let i = 1; i < rects.length; i++){
+        if((rects[i].x - (rects[i-1].x+rects[i-1].width)) >= smax){ spaceIndex.push(true); continue; }
+        spaceIndex.push(false);
+    }spaceIndex.push(false);
 
     txtimg.delete(); rgbaP.delete(); alphaChannel.delete();
     thImg.delete(); cnt.delete(); hiec.delete();
 
-    predictChar(charImgs)
+    predictChar(charImgs, spaceIndex)
 };
 
 window.addEventListener('message', event => {
@@ -710,19 +719,20 @@ window.addEventListener('message', event => {
     }
 });
 
-async function predictChar(Imgs){
+async function predictChar(Imgs, space){
     chars = [];
     const tfmodel = await tf.loadLayersModel('${modelUri}')
     for (let i = 0; i < Imgs.length; i++){
-        console.log(Imgs[i]);
         var inp = tf.tensor(Imgs[i]);
         p = tfmodel.predict(inp).arraySync()[0];
         k = Math.max.apply(null, p);
         charV = p.indexOf(k);
         chars.push(String.fromCharCode(Number(charV)+32));
+        if(space[i] === true){
+            chars.push(" ");
+        }
     }
-    console.log(chars)
-    changeText(chars);
+    changeText(chars.join(''));
 }
 
 document.addEventListener("DOMContentLoaded", () => {
