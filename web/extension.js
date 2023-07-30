@@ -1,137 +1,113 @@
-import * as vscode from 'vscode';
-
-export function activate(context: vscode.ExtensionContext) {
-	let provider = new SseukSseukPanel(context.extensionUri);
-
-	context.subscriptions.push(
-		vscode.window.registerWebviewViewProvider(SseukSseukPanel.viewType, provider));
-
-	vscode.window.onDidChangeTextEditorSelection((e) => {
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.activate = void 0;
+const vscode = require("vscode");
+function activate(context) {
+    let provider = new SseukSseukPanel(context.extensionUri);
+    context.subscriptions.push(vscode.window.registerWebviewViewProvider(SseukSseukPanel.viewType, provider));
+    vscode.window.onDidChangeTextEditorSelection((e) => {
         var lineN = e.selections[0].active.line;
         var colN = e.selections[0].active.character;
         var lineT = vscode.window.activeTextEditor?.document.lineAt(vscode.window.activeTextEditor.selection.active.line).text;
         provider.lineCursor(lineT, lineN, colN);
-	});
-
+    });
     vscode.workspace.onDidChangeConfiguration((e) => {
-        if (e.affectsConfiguration("SseukSseuk.charSize") || e.affectsConfiguration("SseukSseuk.inputDelayTime") || e.affectsConfiguration("SseukSseuk.stylusType")){
+        if (e.affectsConfiguration("SseukSseuk.charSize") || e.affectsConfiguration("SseukSseuk.inputDelayTime") || e.affectsConfiguration("SseukSseuk.stylusType")) {
             vscode.commands.executeCommand("workbench.action.webview.reloadWebviewAction");
         }
     });
-
-    context.subscriptions.push(
-		vscode.commands.registerCommand('SseukSseuk.suggest', () => {
-            vscode.commands.executeCommand("editor.action.triggerSuggest");
-		})
-	);
-
-	context.subscriptions.push(
-		vscode.commands.registerCommand('SseukSseuk.undo', () => {
-            vscode.commands.executeCommand("undo");
-		})
-	);
-
-	context.subscriptions.push(
-		vscode.commands.registerCommand('SseukSseuk.addTopLine', () => {
-            vscode.commands.executeCommand("editor.action.insertLineBefore");
-		})
-	);
-	
-	context.subscriptions.push(
-		vscode.commands.registerCommand('SseukSseuk.addBotLine', () => {
-            vscode.commands.executeCommand("editor.action.insertLineAfter");
-		})
-	);
-
-	context.subscriptions.push(
-		vscode.commands.registerCommand('SseukSseuk.removeLine', () => {
-			vscode.commands.executeCommand("editor.action.deleteLines");
-		})
-	);
+    context.subscriptions.push(vscode.commands.registerCommand('SseukSseuk.suggest', () => {
+        vscode.commands.executeCommand("editor.action.triggerSuggest");
+    }));
+    context.subscriptions.push(vscode.commands.registerCommand('SseukSseuk.undo', () => {
+        vscode.commands.executeCommand("undo");
+    }));
+    context.subscriptions.push(vscode.commands.registerCommand('SseukSseuk.addTopLine', () => {
+        vscode.commands.executeCommand("editor.action.insertLineBefore");
+    }));
+    context.subscriptions.push(vscode.commands.registerCommand('SseukSseuk.addBotLine', () => {
+        vscode.commands.executeCommand("editor.action.insertLineAfter");
+    }));
+    context.subscriptions.push(vscode.commands.registerCommand('SseukSseuk.removeLine', () => {
+        vscode.commands.executeCommand("editor.action.deleteLines");
+    }));
 }
-
-class SseukSseukPanel implements vscode.WebviewViewProvider{
-	public static readonly viewType = "SseukSseuk.panelView";
-
-	private _view?: vscode.WebviewView;
-
-	constructor(
-		private readonly _extensionUri: vscode.Uri
-	 ) {    }
-
-	public resolveWebviewView(
-	  webviewView: vscode.WebviewView, 
-	  context: vscode.WebviewViewResolveContext, 
-	  _token: vscode.CancellationToken) {
-		this._view = webviewView;
-		
-		webviewView.webview.options = {
-			enableScripts: true,
-
-			localResourceRoots:[
-				this._extensionUri
-			]
-		};
-		
-		webviewView.webview.html = this._getSSPHtmlWebview(webviewView.webview);
-
+exports.activate = activate;
+class SseukSseukPanel {
+    constructor(_extensionUri) {
+        this._extensionUri = _extensionUri;
+    }
+    resolveWebviewView(webviewView, context, _token) {
+        this._view = webviewView;
+        webviewView.webview.options = {
+            enableScripts: true,
+            localResourceRoots: [
+                this._extensionUri
+            ]
+        };
+        webviewView.webview.html = this._getSSPHtmlWebview(webviewView.webview);
         webviewView.webview.onDidReceiveMessage(data => {
-			switch (data.type) {
-				case 'textadd':
-                    var tabsize = Number( vscode.workspace.getConfiguration('editor').get('tabSize') ); var tabString = "";
-                    for (var c = 0; c < tabsize; c++){ tabString += " "; }
+            switch (data.type) {
+                case 'textadd':
+                    var tabsize = Number(vscode.workspace.getConfiguration('editor').get('tabSize'));
+                    var tabString = "";
+                    for (var c = 0; c < tabsize; c++) {
+                        tabString += " ";
+                    }
                     var txtout = "";
-                    switch(data.append){
+                    switch (data.append) {
                         case 'none': break;
                         case 'behind': break;
-                        case 'space': txtout += " "; break;
-                        case 'tab': txtout += tabString; break;
+                        case 'space':
+                            txtout += " ";
+                            break;
+                        case 'tab':
+                            txtout += tabString;
+                            break;
                     }
                     txtout += data.value;
-					vscode.window.activeTextEditor?.insertSnippet(new vscode.SnippetString(txtout), // (TODO) 이부분은 나중에 VSCode 내부 API로도 받을수 있게 하기! 
-                            new vscode.Range(new vscode.Position(data.line, data.col), new vscode.Position(data.line, data.col)));
+                    vscode.window.activeTextEditor?.insertSnippet(new vscode.SnippetString(txtout), // (TODO) 이부분은 나중에 VSCode 내부 API로도 받을수 있게 하기! 
+                    new vscode.Range(new vscode.Position(data.line, data.col), new vscode.Position(data.line, data.col)));
                     vscode.commands.executeCommand("editor.action.triggerSuggest");
-				break;
-				case "currentEdit":
+                    break;
+                case "currentEdit":
                     var lineText = vscode.window.activeTextEditor?.document.lineAt(data.line).text;
                     var endT = data.end;
-                    if (endT === -1){ endT = data.start; }
-                    lineText = lineText?.substring(data.start, endT+1);
-                    switch(data.editType){
+                    if (endT === -1) {
+                        endT = data.start;
+                    }
+                    lineText = lineText?.substring(data.start, endT + 1);
+                    switch (data.editType) {
                         case 'cut':
-                            vscode.env.clipboard.writeText(lineText!);
+                            vscode.env.clipboard.writeText(lineText);
                         case 'delete':
                             vscode.window.activeTextEditor?.edit(tee => {
-                                tee.delete(new vscode.Range(new vscode.Position(data.line, data.start), new vscode.Position(data.line, endT+1)));
+                                tee.delete(new vscode.Range(new vscode.Position(data.line, data.start), new vscode.Position(data.line, endT + 1)));
                             });
-                        break;
+                            break;
                         case 'copy':
-                            vscode.env.clipboard.writeText(lineText!);
-                        break;
+                            vscode.env.clipboard.writeText(lineText);
+                            break;
                     }
-                break;
-			}
-		});
-	}
-
-	public lineCursor(lineText: string | undefined, lineNumber: number, colNumber: number){
-		if(this._view) {
-			this._view.webview.postMessage({ type: 'lineCurser', lineT: lineText, lineN: lineNumber, colN: colNumber });
-		}
-	}
-
-	private _getSSPHtmlWebview(webview: vscode.Webview) {
+                    break;
+            }
+        });
+    }
+    lineCursor(lineText, lineNumber, colNumber) {
+        if (this._view) {
+            this._view.webview.postMessage({ type: 'lineCurser', lineT: lineText, lineN: lineNumber, colN: colNumber });
+        }
+    }
+    _getSSPHtmlWebview(webview) {
         var sspSettings = vscode.workspace.getConfiguration('SseukSseuk');
-
         var stylus = (sspSettings.stylusType === "stylus") || (sspSettings.stylusType === "non-hover stylus");
-        var charsize = sspSettings.charSize; var inputDelayTime = sspSettings.inputDelayTime;
+        var charsize = sspSettings.charSize;
+        var inputDelayTime = sspSettings.inputDelayTime;
         var hover = (sspSettings.stylusType === "non-hover stylus") ? "1" : "0";
-
         const opencvjsUri = webview.asWebviewUri(vscode.Uri.joinPath(this._extensionUri, 'media', 'opencv.js'));
         const tfUri = webview.asWebviewUri(vscode.Uri.joinPath(this._extensionUri, 'media', 'tf.min.js'));
         const modelUri = webview.asWebviewUri(vscode.Uri.joinPath(this._extensionUri, 'media', 'convjs/model.json'));
-
-		return `<!DOCTYPE html>
+        return `<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -743,5 +719,7 @@ document.addEventListener("DOMContentLoaded", () => {
     </script>
 </body>
 </html>`;
-	}
+    }
 }
+SseukSseukPanel.viewType = "SseukSseuk.panelView";
+//# sourceMappingURL=extension.js.map
