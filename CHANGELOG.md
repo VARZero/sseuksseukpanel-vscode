@@ -2,8 +2,10 @@
 
 All notable changes to the "sseuksseukpanel-vscode" extension will be documented in this file.
 
-Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how to structure this file.
-
 ## [Unreleased]
 
 - Initial release
+
+## [0.0.6]
+
+- 마크다운 작성 완료
