@@ -307,7 +307,7 @@ canvas{
                 </div>
             </div>
             <div id="appendArea">
-                <div id="appendBehind" class="appendEle"> </div>
+                <div id="appendBehind" class="appendEle">  </div>
                 <div id="appendSpace" class="appendEle">   </div>
                 <div id="appendTab" class="appendEle"></div>
             </div>
