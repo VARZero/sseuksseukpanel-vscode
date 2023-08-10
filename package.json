@@ -22,17 +22,17 @@
       "title": "SseukSseuk-E",
       "properties": {
         "SseukSseuk.charSize":{
-          "description": "패널에 표시 될 코드의 글자 크기를 입력하세요. 재시작시 적용됩니다.",
+          "description": "패널에 표시 될 코드의 글자 크기를 입력하세요.",
           "type":"number",
           "default": 18
         },
         "SseukSseuk.inputDelayTime":{
-          "description": "인식하는 시간을 지정하세요. 재시작시 적용됩니다.",
+          "description": "인식하는 시간을 지정하세요.",
           "type":"number",
           "default": 2000
         },
         "SseukSseuk.stylusType":{
-          "description": "스타일러스 타입을 선택하세요. (시스템이 인식하는 스타일러스 타입을 선택하세요.) 재시작시 적용됩니다.",
+          "description": "스타일러스 타입을 선택하세요. (시스템이 인식하는 스타일러스 타입을 선택하세요.)",
           "type":"string",
           "enum": ["mouse", "stylus", "non-hover stylus"],
           "enumDescriptions": ["스타일러스를 따로 스타일러스로 인식하지 않는 경우 사용하세요. (혹은 다른 선택지가 동작되지 않을때 사용하세요)",

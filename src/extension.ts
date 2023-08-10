@@ -15,7 +15,7 @@ export function activate(context: vscode.ExtensionContext) {
 
     vscode.workspace.onDidChangeConfiguration((e) => {
         if (e.affectsConfiguration("SseukSseuk.charSize") || e.affectsConfiguration("SseukSseuk.inputDelayTime") || e.affectsConfiguration("SseukSseuk.stylusType")){
-            vscode.commands.executeCommand("workbench.action.webview.reloadWebviewAction");
+            provider.settingChange();
         }
     });
 
@@ -55,9 +55,18 @@ class SseukSseukPanel implements vscode.WebviewViewProvider{
 
 	private _view?: vscode.WebviewView;
 
+    private _stylus?: Boolean; private _charsize?: Number;
+    private _inputDelayTime?: Number; private _hover?: String; 
+
 	constructor(
 		private readonly _extensionUri: vscode.Uri
-	 ) {    }
+	 ) {
+        var sspSettings = vscode.workspace.getConfiguration('SseukSseuk');
+
+        this._stylus = (sspSettings.stylusType === "stylus") || (sspSettings.stylusType === "non-hover stylus");
+        this._charsize = sspSettings.charSize; this._inputDelayTime = sspSettings.inputDelayTime;
+        this._hover = (sspSettings.stylusType === "non-hover stylus") ? "1" : "0";
+     }
 
 	public resolveWebviewView(
 	  webviewView: vscode.WebviewView, 
@@ -120,12 +129,20 @@ class SseukSseukPanel implements vscode.WebviewViewProvider{
 		}
 	}
 
-	private _getSSPHtmlWebview(webview: vscode.Webview) {
-        var sspSettings = vscode.workspace.getConfiguration('SseukSseuk');
+    public settingChange(){
+		if(this._view) {
+            var sspSettings = vscode.workspace.getConfiguration('SseukSseuk');
+            this._stylus = (sspSettings.stylusType === "stylus") || (sspSettings.stylusType === "non-hover stylus");
+            this._charsize = sspSettings.charSize; this._inputDelayTime = sspSettings.inputDelayTime;
+            this._hover = (sspSettings.stylusType === "non-hover stylus") ? "1" : "0";
+        
+			this._view.webview.postMessage({ type: 'settingChange', stylus: this._stylus, delayTime: this._inputDelayTime,
+                    hover: this._hover, charsize: this._charsize });
+		}
+	}
 
-        var stylus = (sspSettings.stylusType === "stylus") || (sspSettings.stylusType === "non-hover stylus");
-        var charsize = sspSettings.charSize; var inputDelayTime = sspSettings.inputDelayTime;
-        var hover = (sspSettings.stylusType === "non-hover stylus") ? "1" : "0";
+	private _getSSPHtmlWebview(webview: vscode.Webview) {
+        
 
         const opencvjsUri = webview.asWebviewUri(vscode.Uri.joinPath(this._extensionUri, 'media', 'opencv.js'));
         const tfUri = webview.asWebviewUri(vscode.Uri.joinPath(this._extensionUri, 'media', 'tf.min.js'));
@@ -155,7 +172,7 @@ section#sys{
     display: flex;
     flex-direction: row;
     font-family: Consolas, monospace;
-    font-size: ${String(charsize)}px;
+    font-size: ${String(this._charsize)}px;
     height: 5em; min-width: 100%;
     margin-top: 2em;
 }
@@ -211,12 +228,12 @@ section#sys{
     border-left: 1px dashed var(--elementC);
 }
 #appendSpace{
-    border-left: ${hover}px dashed var(--elementC);
+    border-left: ${this._hover}px dashed var(--elementC);
 }
 #appendTab{
     flex: 1;
     width: 80vw;
-    border-left: ${hover}px dashed var(--elementC);
+    border-left: ${this._hover}px dashed var(--elementC);
 }
 
 #toolArea{
@@ -322,8 +339,8 @@ const RefTa = document.querySelector("#sys > #toolArea");
 const RefEb = document.querySelector("#sys > #EditBox");
 let backgC;
 let elemC;
-let stylus = ${stylus};
-let delayTime = ${inputDelayTime};
+let stylus = ${this._stylus};
+let delayTime = ${this._inputDelayTime};
 
 const vscode = acquireVsCodeApi();
 
@@ -716,6 +733,14 @@ window.addEventListener('message', event => {
     switch (message.type){
         case 'lineCurser':
             setSsuekSsuek(message.lineT, message.lineN, message.colN);
+        break;
+        case 'settingChange':
+            stylus = message.stylus; delayTime = message.delayTime;
+            document.querySelector('#sys #EditBox').style.fontSize = String(message.charsize)+'px';
+            document.querySelector('#sys #appendSpace').style.borderLeftWidth = String(message.hover)+'px';
+            document.querySelector('#sys #appendTab').style.borderLeftWidth = String(message.hover)+'px';
+            console.log(document.querySelector('#sys #EditBox').style)
+            setSsuekSsuek(txt, lastline, lastcol);
         break;
     }
 });
